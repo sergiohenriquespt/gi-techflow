@@ -106,6 +106,58 @@ const FONT_DISPLAY = "'Geist', -apple-system, sans-serif";
 const FONT_BODY    = "'Geist', -apple-system, sans-serif";
 const FONT_MONO    = "'Geist Mono', monospace";
 
+// ─── APP ICON ────────────────────────────────────────────────────────────────
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <rect width="96" height="96" rx="20" fill="#1a1f24"/>
+  <rect x="8" y="8" width="80" height="80" rx="14" fill="none" stroke="#e0cb4b" stroke-width="3"/>
+  <!-- corner TL -->
+  <rect x="16" y="16" width="24" height="24" rx="4" fill="none" stroke="#e0cb4b" stroke-width="2.5"/>
+  <rect x="22" y="22" width="12" height="12" rx="2" fill="#e0cb4b"/>
+  <!-- corner TR -->
+  <rect x="56" y="16" width="24" height="24" rx="4" fill="none" stroke="#e0cb4b" stroke-width="2.5"/>
+  <rect x="62" y="22" width="12" height="12" rx="2" fill="#e0cb4b"/>
+  <!-- corner BL -->
+  <rect x="16" y="56" width="24" height="24" rx="4" fill="none" stroke="#e0cb4b" stroke-width="2.5"/>
+  <rect x="22" y="62" width="12" height="12" rx="2" fill="#e0cb4b"/>
+  <!-- data dots BR -->
+  <rect x="56" y="56" width="7" height="7" rx="1.5" fill="#e0cb4b"/>
+  <rect x="65" y="56" width="7" height="7" rx="1.5" fill="#8d9190"/>
+  <rect x="74" y="56" width="7" height="7" rx="1.5" fill="#e0cb4b"/>
+  <rect x="56" y="65" width="7" height="7" rx="1.5" fill="#8d9190"/>
+  <rect x="65" y="65" width="7" height="7" rx="1.5" fill="#e0cb4b"/>
+  <rect x="74" y="65" width="7" height="7" rx="1.5" fill="#8d9190"/>
+  <rect x="56" y="74" width="7" height="7" rx="1.5" fill="#e0cb4b"/>
+  <rect x="65" y="74" width="7" height="7" rx="1.5" fill="#e0cb4b"/>
+  <rect x="74" y="74" width="7" height="7" rx="1.5" fill="#8d9190"/>
+  <!-- center bars -->
+  <rect x="44" y="16" width="6" height="28" rx="2" fill="#8d9190"/>
+  <rect x="52" y="16" width="4" height="28" rx="2" fill="#e0cb4b"/>
+  <rect x="16" y="44" width="28" height="6" rx="2" fill="#8d9190"/>
+  <rect x="16" y="52" width="28" height="4" rx="2" fill="#e0cb4b"/>
+</svg>`;
+
+const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#1a1f24"/>
+  <rect x="2" y="2" width="28" height="28" rx="5" fill="none" stroke="#e0cb4b" stroke-width="1.5"/>
+  <rect x="5" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/>
+  <rect x="7" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/>
+  <rect x="18" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/>
+  <rect x="20" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/>
+  <rect x="5" y="18" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/>
+  <rect x="7" y="20" width="5" height="5" rx="1" fill="#e0cb4b"/>
+  <rect x="19" y="18" width="4" height="4" rx="1" fill="#e0cb4b"/>
+  <rect x="24" y="18" width="4" height="4" rx="1" fill="#8d9190"/>
+  <rect x="19" y="23" width="4" height="4" rx="1" fill="#8d9190"/>
+  <rect x="24" y="23" width="4" height="4" rx="1" fill="#e0cb4b"/>
+</svg>`;
+
+const FAVICON_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzFhMWYyNCIvPgogIDxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgcng9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2UwY2I0YiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8cmVjdCB4PSI1IiB5PSI1IiB3aWR0aD0iOSIgaGVpZ2h0PSI5IiByeD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBjYjRiIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxyZWN0IHg9IjciIHk9IjciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjZTBjYjRiIi8+CiAgPHJlY3QgeD0iMTgiIHk9IjUiIHdpZHRoPSI5IiBoZWlnaHQ9IjkiIHJ4PSIyIiBmaWxsPSJub25lIiBzdHJva2U9IiNlMGNiNGIiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPHJlY3QgeD0iMjAiIHk9IjciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjZTBjYjRiIi8+CiAgPHJlY3QgeD0iNSIgeT0iMTgiIHdpZHRoPSI5IiBoZWlnaHQ9IjkiIHJ4PSIyIiBmaWxsPSJub25lIiBzdHJva2U9IiNlMGNiNGIiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPHJlY3QgeD0iNyIgeT0iMjAiIHdpZHRoPSI1IiBoZWlnaHQ9IjUiIHJ4PSIxIiBmaWxsPSIjZTBjYjRiIi8+CiAgPHJlY3QgeD0iMTkiIHk9IjE4IiB3aWR0aD0iNCIgaGVpZ2h0PSI0IiByeD0iMSIgZmlsbD0iI2UwY2I0YiIvPgogIDxyZWN0IHg9IjI0IiB5PSIxOCIgd2lkdGg9IjQiIGhlaWdodD0iNCIgcng9IjEiIGZpbGw9IiM4ZDkxOTAiLz4KICA8cmVjdCB4PSIxOSIgeT0iMjMiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIHJ4PSIxIiBmaWxsPSIjOGQ5MTkwIi8+CiAgPHJlY3QgeD0iMjQiIHk9IjIzIiB3aWR0aD0iNCIgaGVpZ2h0PSI0IiByeD0iMSIgZmlsbD0iI2UwY2I0YiIvPgo8L3N2Zz4=";
+
+const AppIcon = ({ size=40, radius=10 }) => (
+  <div style={{ width:size, height:size, borderRadius:radius, overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}
+    dangerouslySetInnerHTML={{ __html: ICON_SVG }}/>
+);
+
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@300;400;500&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -780,9 +832,7 @@ function LoginScreen({ onLogin }) {
       <div style={{ width:"100%", maxWidth:400, animation:"fadeUp 0.4s ease" }}>
         {/* Logo */}
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:40, justifyContent:"center" }}>
-          <div style={{ width:40, height:40, borderRadius:10, background:T.amber, display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <span style={{ fontSize:17, fontWeight:800, color:T.bg, fontFamily:FONT_DISPLAY }}>GI</span>
-          </div>
+          <AppIcon size={48} radius={12}/>
           <div>
             <div style={{ fontSize:18, fontWeight:800, color:T.text, fontFamily:FONT_DISPLAY, letterSpacing:"-0.03em" }}>Asset Manager</div>
             <div style={{ fontSize:10, color:T.textDim, letterSpacing:"0.08em", textTransform:"uppercase", fontFamily:FONT_DISPLAY }}>Gráfica Ideal</div>
@@ -854,9 +904,7 @@ function Sidebar({ activeSection, onSection, onLogout }) {
       {/* Logo */}
       <div style={{ padding:"24px 20px 20px", borderBottom:`1px solid ${T.border}` }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:32, height:32, borderRadius:8, background:T.amber, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <span style={{ fontSize:14, fontWeight:800, color:T.bg, fontFamily:FONT_DISPLAY }}>GI</span>
-          </div>
+          <AppIcon size={36} radius={8}/>
           <div>
             <div style={{ fontSize:13, fontWeight:800, color:T.text, fontFamily:FONT_DISPLAY, letterSpacing:"-0.02em" }}>Asset Manager</div>
             <div style={{ fontSize:9, color:T.textDim, letterSpacing:"0.08em", textTransform:"uppercase", fontFamily:FONT_DISPLAY }}>Gráfica Ideal</div>
@@ -935,6 +983,18 @@ export default function App() {
     setSession(null);
     setAssets([]); setFamilies([]); setLocalizacoes([]); setUtilizadores([]);
   };
+
+  useEffect(() => {
+    // Set favicon
+    const existingFavicon = document.querySelector("link[rel*='icon']");
+    const favicon = existingFavicon || document.createElement("link");
+    favicon.type = "image/svg+xml";
+    favicon.rel = "icon";
+    favicon.href = FAVICON_DATA_URL;
+    if (!existingFavicon) document.head.appendChild(favicon);
+    // Set page title
+    document.title = "GI Asset Manager";
+  }, []);
 
   useEffect(() => {
     const checkSession = async () => {
