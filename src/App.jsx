@@ -835,7 +835,7 @@ function LoginScreen({ onLogin }) {
           <AppIcon size={48} radius={12}/>
           <div>
             <div style={{ fontSize:18, fontWeight:800, color:T.text, fontFamily:FONT_DISPLAY, letterSpacing:"-0.03em" }}>TechFlow</div>
-            <div style={{ fontSize:10, color:T.textDim, letterSpacing:"0.08em", textTransform:"uppercase", fontFamily:FONT_DISPLAY }}>Gráfica Ideal</div>
+            <div style={{ fontSize:10, color:T.textDim, letterSpacing:"0.08em", textTransform:"uppercase", fontFamily:FONT_DISPLAY }}>GI</div>
           </div>
         </div>
 
@@ -907,7 +907,7 @@ function Sidebar({ activeSection, onSection, onLogout }) {
           <AppIcon size={36} radius={8}/>
           <div>
             <div style={{ fontSize:13, fontWeight:800, color:T.text, fontFamily:FONT_DISPLAY, letterSpacing:"-0.02em" }}>TechFlow</div>
-            <div style={{ fontSize:9, color:T.textDim, letterSpacing:"0.08em", textTransform:"uppercase", fontFamily:FONT_DISPLAY }}>Gráfica Ideal</div>
+            <div style={{ fontSize:9, color:T.textDim, letterSpacing:"0.08em", textTransform:"uppercase", fontFamily:FONT_DISPLAY }}>GI</div>
           </div>
         </div>
       </div>
