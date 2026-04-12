@@ -100,14 +100,15 @@ const F  = "'Outfit', system-ui, sans-serif";
 const FM = "'Outfit', monospace";
 
 const SECTIONS = [
+  { id:"localizacao",      label:"Localização" },
   { id:"computador",       label:"Computador" },
   { id:"software",         label:"Software" },
   { id:"monitor",          label:"Monitor" },
   { id:"rede",             label:"Rede" },
-  { id:"observacoes",      label:"Observações" },
   { id:"dados_principais", label:"Dados Principais" },
   { id:"equipamento",      label:"Equipamento" },
   { id:"tarifario",        label:"Tarifário" },
+  { id:"observacoes",      label:"Observações" },
 ];
 
 const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1c2128"/><rect x="2" y="2" width="28" height="28" rx="5" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="5" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="7" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="18" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="20" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="5" y="18" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="7" y="20" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="19" y="18" width="4" height="4" rx="1" fill="#e0cb4b"/><rect x="24" y="18" width="4" height="4" rx="1" fill="#8d9190"/><rect x="19" y="23" width="4" height="4" rx="1" fill="#8d9190"/><rect x="24" y="23" width="4" height="4" rx="1" fill="#e0cb4b"/></svg>`;
@@ -413,14 +414,38 @@ function Modal({ onClose, children, title, isMobile }) {
 }
 
 // ─── ASSET FORM ───────────────────────────────────────────────────────────────
-function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, onSave, onClose, showToast, isMobile }) {
-  const [form,      setForm]      = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset});
-  const [preview,   setPreview]   = useState(asset?.photo_url||null);
-  const [uploading, setUploading] = useState(false);
-  const [saving,    setSaving]    = useState(false);
-  const [errors,    setErrors]    = useState({});
+function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, onAddMarca, onAddTarifario, onSave, onClose, showToast, isMobile }) {
+  const [form,           setForm]           = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset});
+  const [preview,        setPreview]        = useState(asset?.photo_url||null);
+  const [uploading,      setUploading]      = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [errors,         setErrors]         = useState({});
+  const [newMarcaMode,   setNewMarcaMode]   = useState(false);
+  const [newMarcaVal,    setNewMarcaVal]    = useState("");
+  const [newTarifMode,   setNewTarifMode]   = useState(false);
+  const [newTarifVal,    setNewTarifVal]    = useState("");
   const fileRef = useRef();
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const saveMarca = async () => {
+    if (!newMarcaVal.trim()) return;
+    try {
+      const res = await api.addMarca(newMarcaVal.trim());
+      onAddMarca(res[0]);
+      set("equip_marca", res[0].nome);
+      setNewMarcaMode(false); setNewMarcaVal("");
+    } catch { showToast("Erro ao criar marca","error"); }
+  };
+
+  const saveTarif = async () => {
+    if (!newTarifVal.trim()) return;
+    try {
+      const res = await api.addTarifario(newTarifVal.trim());
+      onAddTarifario(res[0]);
+      set("tarif_nome", res[0].nome);
+      setNewTarifMode(false); setNewTarifVal("");
+    } catch { showToast("Erro ao criar tarifário","error"); }
+  };
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -557,12 +582,14 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
       </div>
       </>}
 
+      {showSec("localizacao") && <>
       <SH label="Localização"/>
       <select value={form.localizacao||""} onChange={e=>set("localizacao",e.target.value)}
         style={{ ...IS(), cursor:"pointer" }}>
         <option value="">— Selecionar —</option>
         {localizacoes.map(l=><option key={l.id} value={l.nome}>{l.nome}</option>)}
       </select>
+      </>}
 
       {showSec("monitor") && <>
       <SH label="Monitor"/>
@@ -596,14 +623,6 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
       </div>
       </>}
 
-      {showSec("observacoes") && <>
-      <SH label="Observações"/>
-      <textarea value={form.observacoes||""} onChange={e=>set("observacoes",e.target.value)} rows={3}
-        placeholder="Notas adicionais..." style={{ ...IS(), resize:"vertical", lineHeight:1.6 }}
-        onFocus={e=>e.target.style.borderColor=C.yellow}
-        onBlur={e=>e.target.style.borderColor=C.border2}/>
-      </>}
-
       {showSec("dados_principais") && <>
       <SH label="Dados Principais"/>
       <div>
@@ -617,10 +636,27 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
       <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
         <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
           <label style={LS}>Marca</label>
-          <select value={form.equip_marca||""} onChange={e=>set("equip_marca",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
-            <option value="">— Selecionar —</option>
-            {marcas.map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
-          </select>
+          {newMarcaMode ? (
+            <div style={{ display:"flex", gap:8 }}>
+              <input value={newMarcaVal} onChange={e=>setNewMarcaVal(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&saveMarca()}
+                placeholder="Nome da marca..." autoFocus
+                style={{ ...IS(), flex:1 }}
+                onFocus={e=>e.target.style.borderColor=C.yellow}
+                onBlur={e=>e.target.style.borderColor=C.border2}/>
+              <button onClick={saveMarca} style={{ padding:"0 14px", borderRadius:8, border:"none",
+                background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
+              <button onClick={()=>{ setNewMarcaMode(false); setNewMarcaVal(""); }}
+                style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
+                background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
+            </div>
+          ) : (
+            <select value={form.equip_marca||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewMarcaMode(true); } else { set("equip_marca",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
+              <option value="">— Selecionar —</option>
+              {marcas.map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
+              <option value="__new__">＋ Criar nova marca...</option>
+            </select>
+          )}
         </div>
         {[
           { k:"equip_modelo",  l:"Modelo",           ph:"Ex: iPhone 15 Pro" },
@@ -655,16 +691,33 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
       <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
         <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
           <label style={LS}>Tarifário</label>
-          <select value={form.tarif_nome||""} onChange={e=>set("tarif_nome",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
-            <option value="">— Selecionar —</option>
-            {tarifarios.map(t=><option key={t.id} value={t.nome}>{t.nome}</option>)}
-          </select>
+          {newTarifMode ? (
+            <div style={{ display:"flex", gap:8 }}>
+              <input value={newTarifVal} onChange={e=>setNewTarifVal(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&saveTarif()}
+                placeholder="Nome do tarifário..." autoFocus
+                style={{ ...IS(), flex:1 }}
+                onFocus={e=>e.target.style.borderColor=C.yellow}
+                onBlur={e=>e.target.style.borderColor=C.border2}/>
+              <button onClick={saveTarif} style={{ padding:"0 14px", borderRadius:8, border:"none",
+                background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
+              <button onClick={()=>{ setNewTarifMode(false); setNewTarifVal(""); }}
+                style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
+                background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
+            </div>
+          ) : (
+            <select value={form.tarif_nome||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewTarifMode(true); } else { set("tarif_nome",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
+              <option value="">— Selecionar —</option>
+              {tarifarios.map(t=><option key={t.id} value={t.nome}>{t.nome}</option>)}
+              <option value="__new__">＋ Criar novo tarifário...</option>
+            </select>
+          )}
         </div>
         {[
-          { k:"tarif_cartao",  l:"Nº Cartão",      ph:"Ex: 89351000012345678" },
-          { k:"tarif_pin",     l:"PIN original",   ph:"••••" },
-          { k:"tarif_puk",     l:"PUK",            ph:"Ex: 12345678" },
-          { k:"tarif_plafond", l:"Plafond de Dados",ph:"Ex: 20GB" },
+          { k:"tarif_cartao",  l:"Nº Cartão",       ph:"Ex: 89351000012345678" },
+          { k:"tarif_pin",     l:"PIN original",    ph:"••••" },
+          { k:"tarif_puk",     l:"PUK",             ph:"Ex: 12345678" },
+          { k:"tarif_plafond", l:"Plafond de Dados", ph:"Ex: 20GB" },
         ].map(f=>(
           <div key={f.k}>
             <label style={LS}>{f.l}</label>
@@ -672,6 +725,14 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
           </div>
         ))}
       </div>
+      </>}
+
+      {showSec("observacoes") && <>
+      <SH label="Observações"/>
+      <textarea value={form.observacoes||""} onChange={e=>set("observacoes",e.target.value)} rows={3}
+        placeholder="Notas adicionais..." style={{ ...IS(), resize:"vertical", lineHeight:1.6 }}
+        onFocus={e=>e.target.style.borderColor=C.yellow}
+        onBlur={e=>e.target.style.borderColor=C.border2}/>
       </>}
 
       <div style={{ display:"flex", gap:10, marginTop:20 }}>
@@ -716,6 +777,7 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
   const fmtDate = v => { if (!v) return null; const [y,m,d]=v.split("-"); return `${d}/${m}/${y}`; };
 
   const sections = [
+    { id:"localizacao",      title:"Localização",      rows:[["Localização",asset.localizacao]] },
     { id:"computador",       title:"Computador",       rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
     { id:"software",         title:"Software",         rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
     { id:"monitor",          title:"Monitor",          rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
@@ -743,7 +805,7 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
           <h2 style={{ fontSize:18, fontWeight:700, color:C.text, letterSpacing:"-0.01em", marginBottom:8 }}>{asset.name}</h2>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6, alignItems:"center" }}>
             {familyName && <Badge label={familyName}/>}
-            {asset.localizacao && <span style={{ fontSize:12, color:C.textS }}>📍 {asset.localizacao}</span>}
+            {showSec("localizacao") && asset.localizacao && <span style={{ fontSize:12, color:C.textS }}>📍 {asset.localizacao}</span>}
           </div>
         </div>
       </div>
@@ -884,7 +946,7 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 }
 
 // ─── ASSETS PAGE ──────────────────────────────────────────────────────────────
-function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tarifarios, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
+function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tarifarios, onAddMarca, onAddTarifario, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
   const [search,       setSearch]       = useState("");
   const [filterFamily, setFilterFamily] = useState("all");
   const [view,         setView]         = useState("list");
@@ -1071,7 +1133,9 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
       {/* Form */}
       {showForm && (
         <AssetForm asset={editingAsset} families={families} localizacoes={localizacoes}
-          utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios} onSave={handleSave} isMobile={isMobile}
+          utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios}
+          onAddMarca={onAddMarca} onAddTarifario={onAddTarifario}
+          onSave={handleSave} isMobile={isMobile}
           onClose={()=>{ setShowForm(false); setEditingAsset(null); }} showToast={showToast}/>
       )}
 
@@ -1539,6 +1603,9 @@ export default function App() {
     else if (type==="tarifarios") setTarifarios(updated);
   };
 
+  const handleAddMarca     = item => setMarcas(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
+  const handleAddTarifario = item => setTarifarios(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
+
   // Guards
   if (authChecking) return (
     <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -1561,6 +1628,7 @@ export default function App() {
           <AssetsPage
             assets={assets} families={families} localizacoes={localizacoes}
             utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios}
+            onAddMarca={handleAddMarca} onAddTarifario={handleAddTarifario}
             loading={loading} isMobile={isMobile}
             onSaveAsset={handleSaveAsset} onDeleteAsset={handleDeleteAsset}
             showToast={showToast}/>
