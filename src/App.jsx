@@ -255,7 +255,7 @@ function Sidebar({ active, onNav, onLogout }) {
           <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:36, height:36, flexShrink:0 }}/>
           <div>
             <div style={{ fontSize:15, fontWeight:700, color:C.text, letterSpacing:"-0.01em", lineHeight:1.1 }}>TechFlow</div>
-            <div style={{ fontSize:10, color:C.textS, letterSpacing:"0.06em", marginTop:2 }}>Gráfica Ideal</div>
+            <div style={{ fontSize:10, fontWeight:700, color:C.yellow, letterSpacing:"0.06em", marginTop:2 }}>GI</div>
           </div>
         </div>
       </div>
@@ -977,7 +977,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0 }}>
-      <TopBar title="TechFlow" isMobile={isMobile}
+      <TopBar title="Ativos" isMobile={isMobile}
         action={
           <>
             {!isMobile && (
@@ -1483,7 +1483,7 @@ function Login({ onLogin }) {
         <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:60, height:60 }}/>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:28, fontWeight:700, color:C.text, letterSpacing:"-0.02em", lineHeight:1 }}>TechFlow</div>
-          <div style={{ fontSize:12, color:C.textS, letterSpacing:"0.06em", marginTop:5 }}>Gráfica Ideal</div>
+          <div style={{ fontSize:12, fontWeight:700, color:C.yellow, letterSpacing:"0.06em", marginTop:5 }}>GI</div>
         </div>
       </div>
 
