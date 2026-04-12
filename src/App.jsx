@@ -56,6 +56,12 @@ const api = {
   deleteFamily:      (id)   => sbFetch(`/gi_am_families?id=eq.${id}`,    {method:"DELETE"}),
   addLocalizacao:    (nome) => sbFetch("/gi_am_localizacoes",             {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
   deleteLocalizacao: (id)   => sbFetch(`/gi_am_localizacoes?id=eq.${id}`,{method:"DELETE"}),
+  getMarcas:         ()     => sbFetch("/gi_am_marcas?select=*&order=nome.asc"),
+  addMarca:          (nome) => sbFetch("/gi_am_marcas",                   {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
+  deleteMarca:       (id)   => sbFetch(`/gi_am_marcas?id=eq.${id}`,      {method:"DELETE"}),
+  getTarifarios:     ()     => sbFetch("/gi_am_tarifarios?select=*&order=nome.asc"),
+  addTarifario:      (nome) => sbFetch("/gi_am_tarifarios",               {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
+  deleteTarifario:   (id)   => sbFetch(`/gi_am_tarifarios?id=eq.${id}`,  {method:"DELETE"}),
   addUtilizador:     (d)    => sbFetch("/gi_am_utilizadores",             {method:"POST",  prefer:"return=representation", body:JSON.stringify(d)}),
   updateUtilizador:  (id,d) => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
   deleteUtilizador:  (id)   => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"DELETE"}),
@@ -94,11 +100,14 @@ const F  = "'Outfit', system-ui, sans-serif";
 const FM = "'Outfit', monospace";
 
 const SECTIONS = [
-  { id:"computador", label:"Computador" },
-  { id:"software",   label:"Software" },
-  { id:"monitor",    label:"Monitor" },
-  { id:"rede",       label:"Rede" },
-  { id:"observacoes",label:"Observações" },
+  { id:"computador",       label:"Computador" },
+  { id:"software",         label:"Software" },
+  { id:"monitor",          label:"Monitor" },
+  { id:"rede",             label:"Rede" },
+  { id:"observacoes",      label:"Observações" },
+  { id:"dados_principais", label:"Dados Principais" },
+  { id:"equipamento",      label:"Equipamento" },
+  { id:"tarifario",        label:"Tarifário" },
 ];
 
 const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1c2128"/><rect x="2" y="2" width="28" height="28" rx="5" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="5" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="7" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="18" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="20" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="5" y="18" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="7" y="20" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="19" y="18" width="4" height="4" rx="1" fill="#e0cb4b"/><rect x="24" y="18" width="4" height="4" rx="1" fill="#8d9190"/><rect x="19" y="23" width="4" height="4" rx="1" fill="#8d9190"/><rect x="24" y="23" width="4" height="4" rx="1" fill="#e0cb4b"/></svg>`;
@@ -166,6 +175,11 @@ const EMPTY_FORM = {
   ms365:null, localizacao:"",
   monitor_marca:"", monitor_modelo:"", monitor_polegadas:"", monitor_quantidade:"",
   dominio:"", grupo_trabalho:"", observacoes:"", utilizador_id:"",
+  // Smartphone
+  telefone_numero:"",
+  equip_marca:"", equip_modelo:"", equip_serial:"", equip_imei1:"", equip_imei2:"",
+  equip_data_compra:"", equip_data_entrega:"",
+  tarif_nome:"", tarif_cartao:"", tarif_pin:"", tarif_puk:"", tarif_plafond:"",
 };
 
 const Avatar = ({ src, name, size=36, round=false }) => {
@@ -399,7 +413,7 @@ function Modal({ onClose, children, title, isMobile }) {
 }
 
 // ─── ASSET FORM ───────────────────────────────────────────────────────────────
-function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClose, showToast, isMobile }) {
+function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, onSave, onClose, showToast, isMobile }) {
   const [form,      setForm]      = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset});
   const [preview,   setPreview]   = useState(asset?.photo_url||null);
   const [uploading, setUploading] = useState(false);
@@ -431,6 +445,15 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
         monitor_polegadas:form.monitor_polegadas||null, monitor_quantidade:form.monitor_quantidade||null,
         dominio:form.dominio||null, grupo_trabalho:form.grupo_trabalho||null,
         observacoes:form.observacoes||null, utilizador_id:form.utilizador_id||null,
+        telefone_numero:form.telefone_numero||null,
+        equip_marca:form.equip_marca||null, equip_modelo:form.equip_modelo||null,
+        equip_serial:form.equip_serial||null, equip_imei1:form.equip_imei1||null,
+        equip_imei2:form.equip_imei2||null,
+        equip_data_compra:form.equip_data_compra||null,
+        equip_data_entrega:form.equip_data_entrega||null,
+        tarif_nome:form.tarif_nome||null, tarif_cartao:form.tarif_cartao||null,
+        tarif_pin:form.tarif_pin||null, tarif_puk:form.tarif_puk||null,
+        tarif_plafond:form.tarif_plafond||null,
       };
       const res = asset?.id ? await api.updateAsset(asset.id, p) : await api.addAsset(p);
       onSave(res[0]);
@@ -581,6 +604,76 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
         onBlur={e=>e.target.style.borderColor=C.border2}/>
       </>}
 
+      {showSec("dados_principais") && <>
+      <SH label="Dados Principais"/>
+      <div>
+        <label style={LS}>Número</label>
+        <input {...iP("telefone_numero")} placeholder="Ex: +351 912 345 678"/>
+      </div>
+      </>}
+
+      {showSec("equipamento") && <>
+      <SH label="Equipamento"/>
+      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+        <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
+          <label style={LS}>Marca</label>
+          <select value={form.equip_marca||""} onChange={e=>set("equip_marca",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
+            <option value="">— Selecionar —</option>
+            {marcas.map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
+          </select>
+        </div>
+        {[
+          { k:"equip_modelo",  l:"Modelo",           ph:"Ex: iPhone 15 Pro" },
+          { k:"equip_serial",  l:"Número de Série",  ph:"Ex: F2LXX1234567" },
+          { k:"equip_imei1",   l:"IMEI 1",           ph:"Ex: 351234567890123" },
+          { k:"equip_imei2",   l:"IMEI 2",           ph:"Ex: 351234567890124" },
+        ].map(f=>(
+          <div key={f.k}>
+            <label style={LS}>{f.l}</label>
+            <input {...iP(f.k)} placeholder={f.ph}/>
+          </div>
+        ))}
+        <div>
+          <label style={LS}>Data de Compra</label>
+          <input type="date" value={form.equip_data_compra||""} onChange={e=>set("equip_data_compra",e.target.value)}
+            style={{ ...IS(), cursor:"pointer", colorScheme:"dark" }}
+            onFocus={e=>e.target.style.borderColor=C.yellow}
+            onBlur={e=>e.target.style.borderColor=C.border2}/>
+        </div>
+        <div>
+          <label style={LS}>Data de Entrega</label>
+          <input type="date" value={form.equip_data_entrega||""} onChange={e=>set("equip_data_entrega",e.target.value)}
+            style={{ ...IS(), cursor:"pointer", colorScheme:"dark" }}
+            onFocus={e=>e.target.style.borderColor=C.yellow}
+            onBlur={e=>e.target.style.borderColor=C.border2}/>
+        </div>
+      </div>
+      </>}
+
+      {showSec("tarifario") && <>
+      <SH label="Tarifário"/>
+      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+        <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
+          <label style={LS}>Tarifário</label>
+          <select value={form.tarif_nome||""} onChange={e=>set("tarif_nome",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
+            <option value="">— Selecionar —</option>
+            {tarifarios.map(t=><option key={t.id} value={t.nome}>{t.nome}</option>)}
+          </select>
+        </div>
+        {[
+          { k:"tarif_cartao",  l:"Nº Cartão",      ph:"Ex: 89351000012345678" },
+          { k:"tarif_pin",     l:"PIN original",   ph:"••••" },
+          { k:"tarif_puk",     l:"PUK",            ph:"Ex: 12345678" },
+          { k:"tarif_plafond", l:"Plafond de Dados",ph:"Ex: 20GB" },
+        ].map(f=>(
+          <div key={f.k}>
+            <label style={LS}>{f.l}</label>
+            <input {...iP(f.k)} placeholder={f.ph}/>
+          </div>
+        ))}
+      </div>
+      </>}
+
       <div style={{ display:"flex", gap:10, marginTop:20 }}>
         <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10,
           border:`1.5px solid ${C.border2}`, background:"transparent", color:C.textS,
@@ -620,11 +713,16 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
     </div>
   );
 
+  const fmtDate = v => { if (!v) return null; const [y,m,d]=v.split("-"); return `${d}/${m}/${y}`; };
+
   const sections = [
-    { id:"computador", title:"Computador", rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
-    { id:"software",   title:"Software",   rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
-    { id:"monitor",    title:"Monitor",    rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
-    { id:"rede",       title:"Rede",       rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
+    { id:"computador",       title:"Computador",       rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
+    { id:"software",         title:"Software",         rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
+    { id:"monitor",          title:"Monitor",          rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
+    { id:"rede",             title:"Rede",             rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
+    { id:"dados_principais", title:"Dados Principais", rows:[["Número",asset.telefone_numero]] },
+    { id:"equipamento",      title:"Equipamento",      rows:[["Marca",asset.equip_marca],["Modelo",asset.equip_modelo],["Nº Série",asset.equip_serial,true],["IMEI 1",asset.equip_imei1,true],["IMEI 2",asset.equip_imei2,true],["Data Compra",fmtDate(asset.equip_data_compra)],["Data Entrega",fmtDate(asset.equip_data_entrega)]] },
+    { id:"tarifario",        title:"Tarifário",        rows:[["Tarifário",asset.tarif_nome],["Nº Cartão",asset.tarif_cartao,true],["PIN original",asset.tarif_pin,true],["PUK",asset.tarif_puk,true],["Plafond Dados",asset.tarif_plafond]] },
   ].filter(s => showSec(s.id));
 
   const content = (
@@ -786,7 +884,7 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 }
 
 // ─── ASSETS PAGE ──────────────────────────────────────────────────────────────
-function AssetsPage({ assets, families, localizacoes, utilizadores, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
+function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tarifarios, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
   const [search,       setSearch]       = useState("");
   const [filterFamily, setFilterFamily] = useState("all");
   const [view,         setView]         = useState("list");
@@ -973,7 +1071,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, loading, onS
       {/* Form */}
       {showForm && (
         <AssetForm asset={editingAsset} families={families} localizacoes={localizacoes}
-          utilizadores={utilizadores} onSave={handleSave} isMobile={isMobile}
+          utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios} onSave={handleSave} isMobile={isMobile}
           onClose={()=>{ setShowForm(false); setEditingAsset(null); }} showToast={showToast}/>
       )}
 
@@ -1000,7 +1098,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, loading, onS
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToast, onLogout, isMobile }) {
+function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios, onUpdate, showToast, onLogout, isMobile }) {
   const [section, setSection] = useState(null);
   const [showUForm, setShowUForm] = useState(false);
   const [editingU, setEditingU] = useState(null);
@@ -1032,7 +1130,7 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
     prev.includes(id) ? prev.filter(s=>s!==id) : [...prev, id]
   );
 
-  const currentList = section==="families" ? families : section==="localizacoes" ? localizacoes : [];
+  const currentList = section==="families" ? families : section==="localizacoes" ? localizacoes : section==="marcas" ? marcas : section==="tarifarios" ? tarifarios : [];
   const nameKey = section==="families" ? "name" : "nome";
 
   const addItem = async () => {
@@ -1041,8 +1139,12 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
     try {
       if (section==="families") {
         const res = await api.addFamily(newVal.trim()); onUpdate("families",[...families,res[0]]);
-      } else {
+      } else if (section==="localizacoes") {
         const res = await api.addLocalizacao(newVal.trim()); onUpdate("localizacoes",[...localizacoes,res[0]]);
+      } else if (section==="marcas") {
+        const res = await api.addMarca(newVal.trim()); onUpdate("marcas",[...marcas,res[0]]);
+      } else if (section==="tarifarios") {
+        const res = await api.addTarifario(newVal.trim()); onUpdate("tarifarios",[...tarifarios,res[0]]);
       }
       setNewVal(""); setAddErr(""); showToast("Adicionado.");
     } catch { showToast("Erro ao adicionar","error"); }
@@ -1051,7 +1153,9 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
   const removeItem = async (item) => {
     try {
       if (section==="families") { await api.deleteFamily(item.id); onUpdate("families",families.filter(f=>f.id!==item.id)); }
-      else { await api.deleteLocalizacao(item.id); onUpdate("localizacoes",localizacoes.filter(l=>l.id!==item.id)); }
+      else if (section==="localizacoes") { await api.deleteLocalizacao(item.id); onUpdate("localizacoes",localizacoes.filter(l=>l.id!==item.id)); }
+      else if (section==="marcas") { await api.deleteMarca(item.id); onUpdate("marcas",marcas.filter(m=>m.id!==item.id)); }
+      else if (section==="tarifarios") { await api.deleteTarifario(item.id); onUpdate("tarifarios",tarifarios.filter(t=>t.id!==item.id)); }
       showToast("Removido.");
     } catch { showToast("Erro","error"); }
   };
@@ -1093,6 +1197,8 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
   const MENU = [
     { id:"families",     label:"Famílias",    count:families.length },
     { id:"localizacoes", label:"Localizações",count:localizacoes.length },
+    { id:"marcas",       label:"Marcas",      count:marcas.length },
+    { id:"tarifarios",   label:"Tarifários",  count:tarifarios.length },
     { id:"utilizadores", label:"Utilizadores",count:utilizadores.length },
   ];
 
@@ -1208,7 +1314,7 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
             <div style={{ display:"flex", gap:10, marginBottom:8 }}>
               <input value={newVal} onChange={e=>{ setNewVal(e.target.value); setAddErr(""); }}
                 onKeyDown={e=>e.key==="Enter"&&addItem()}
-                placeholder={section==="families"?"Ex: Computador":"Ex: Gabinete Informática"}
+                placeholder={section==="families"?"Ex: Computador":section==="marcas"?"Ex: Apple":section==="tarifarios"?"Ex: NOS Empresas 20GB":"Ex: Gabinete Informática"}
                 style={{ ...IS(!!addErr), flex:1, fontSize:13 }}
                 onFocus={e=>e.target.style.borderColor=C.yellow}
                 onBlur={e=>e.target.style.borderColor=addErr?C.red:C.border2}/>
@@ -1371,6 +1477,8 @@ export default function App() {
   const [families,     setFamilies]     = useState([]);
   const [localizacoes, setLocalizacoes] = useState([]);
   const [utilizadores, setUtilizadores] = useState([]);
+  const [marcas,       setMarcas]       = useState([]);
+  const [tarifarios,   setTarifarios]   = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [tab,          setTab]          = useState("assets");
   const [toast,        setToast]        = useState(null);
@@ -1402,8 +1510,8 @@ export default function App() {
   // Load data
   useEffect(() => {
     if (!session) return;
-    Promise.all([api.getAssets(), api.getFamilies(), api.getLocalizacoes(), api.getUtilizadores()])
-      .then(([a,f,l,u]) => { setAssets(a||[]); setFamilies(f||[]); setLocalizacoes(l||[]); setUtilizadores(u||[]); })
+    Promise.all([api.getAssets(), api.getFamilies(), api.getLocalizacoes(), api.getUtilizadores(), api.getMarcas(), api.getTarifarios()])
+      .then(([a,f,l,u,m,t]) => { setAssets(a||[]); setFamilies(f||[]); setLocalizacoes(l||[]); setUtilizadores(u||[]); setMarcas(m||[]); setTarifarios(t||[]); })
       .catch(err => showToast("Erro ao carregar: "+(err.message||""),"error"))
       .finally(() => setLoading(false));
   }, [session]);
@@ -1427,6 +1535,8 @@ export default function App() {
     if (type==="families") setFamilies(updated);
     else if (type==="localizacoes") setLocalizacoes(updated);
     else if (type==="utilizadores") setUtilizadores(updated);
+    else if (type==="marcas") setMarcas(updated);
+    else if (type==="tarifarios") setTarifarios(updated);
   };
 
   // Guards
@@ -1450,13 +1560,15 @@ export default function App() {
         {tab==="assets" && (
           <AssetsPage
             assets={assets} families={families} localizacoes={localizacoes}
-            utilizadores={utilizadores} loading={loading} isMobile={isMobile}
+            utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios}
+            loading={loading} isMobile={isMobile}
             onSaveAsset={handleSaveAsset} onDeleteAsset={handleDeleteAsset}
             showToast={showToast}/>
         )}
         {tab==="settings" && (
           <SettingsPage
             families={families} localizacoes={localizacoes} utilizadores={utilizadores}
+            marcas={marcas} tarifarios={tarifarios}
             onUpdate={handleSettingsUpdate} showToast={showToast}
             onLogout={handleLogout} isMobile={isMobile}/>
         )}
