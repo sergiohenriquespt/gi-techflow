@@ -52,6 +52,7 @@ const api = {
   updateAsset:       (id,d) => sbFetch(`/gi_am_assets?id=eq.${id}`,      {method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
   deleteAsset:       (id)   => sbFetch(`/gi_am_assets?id=eq.${id}`,      {method:"DELETE"}),
   addFamily:         (name) => sbFetch("/gi_am_families",                 {method:"POST",  prefer:"return=representation", body:JSON.stringify({name})}),
+  updateFamily:      (id,d) => sbFetch(`/gi_am_families?id=eq.${id}`,    {method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
   deleteFamily:      (id)   => sbFetch(`/gi_am_families?id=eq.${id}`,    {method:"DELETE"}),
   addLocalizacao:    (nome) => sbFetch("/gi_am_localizacoes",             {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
   deleteLocalizacao: (id)   => sbFetch(`/gi_am_localizacoes?id=eq.${id}`,{method:"DELETE"}),
@@ -91,6 +92,14 @@ const C = {
 };
 const F  = "'Outfit', system-ui, sans-serif";
 const FM = "'Outfit', monospace";
+
+const SECTIONS = [
+  { id:"computador", label:"Computador" },
+  { id:"software",   label:"Software" },
+  { id:"monitor",    label:"Monitor" },
+  { id:"rede",       label:"Rede" },
+  { id:"observacoes",label:"Observações" },
+];
 
 const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1c2128"/><rect x="2" y="2" width="28" height="28" rx="5" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="5" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="7" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="18" y="5" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="20" y="7" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="5" y="18" width="9" height="9" rx="2" fill="none" stroke="#e0cb4b" stroke-width="1.5"/><rect x="7" y="20" width="5" height="5" rx="1" fill="#e0cb4b"/><rect x="19" y="18" width="4" height="4" rx="1" fill="#e0cb4b"/><rect x="24" y="18" width="4" height="4" rx="1" fill="#8d9190"/><rect x="19" y="23" width="4" height="4" rx="1" fill="#8d9190"/><rect x="24" y="23" width="4" height="4" rx="1" fill="#e0cb4b"/></svg>`;
 
@@ -436,6 +445,10 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
     onBlur:e=>e.target.style.borderColor=errors[k]?C.red:C.border2,
   });
 
+  const selectedFamily = families.find(f => f.id === form.family_id);
+  const allowedSecs = selectedFamily?.sections ?? SECTIONS.map(s => s.id);
+  const showSec = id => !form.family_id || allowedSecs.includes(id);
+
   const padding = isMobile ? "16px 20px 24px" : "20px 24px 24px";
   const gridCols = isMobile ? "1fr" : "1fr 1fr";
 
@@ -480,6 +493,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
         </div>
       </div>
 
+      {showSec("computador") && <>
       <SH label="Computador"/>
       <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
         {[
@@ -497,7 +511,9 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
           </div>
         ))}
       </div>
+      </>}
 
+      {showSec("software") && <>
       <SH label="Software"/>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
         padding:"12px 14px", background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
@@ -516,6 +532,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
           })}
         </div>
       </div>
+      </>}
 
       <SH label="Localização"/>
       <select value={form.localizacao||""} onChange={e=>set("localizacao",e.target.value)}
@@ -524,6 +541,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
         {localizacoes.map(l=><option key={l.id} value={l.nome}>{l.nome}</option>)}
       </select>
 
+      {showSec("monitor") && <>
       <SH label="Monitor"/>
       <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
         {[
@@ -538,7 +556,9 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
           </div>
         ))}
       </div>
+      </>}
 
+      {showSec("rede") && <>
       <SH label="Rede"/>
       <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
         {[
@@ -551,12 +571,15 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
           </div>
         ))}
       </div>
+      </>}
 
+      {showSec("observacoes") && <>
       <SH label="Observações"/>
       <textarea value={form.observacoes||""} onChange={e=>set("observacoes",e.target.value)} rows={3}
         placeholder="Notas adicionais..." style={{ ...IS(), resize:"vertical", lineHeight:1.6 }}
         onFocus={e=>e.target.style.borderColor=C.yellow}
         onBlur={e=>e.target.style.borderColor=C.border2}/>
+      </>}
 
       <div style={{ display:"flex", gap:10, marginTop:20 }}>
         <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10,
@@ -581,9 +604,13 @@ function AssetForm({ asset, families, localizacoes, utilizadores, onSave, onClos
 // ─── ASSET DETAIL ─────────────────────────────────────────────────────────────
 // Desktop: painel deslizante lateral; Mobile: página própria
 function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose, isMobile }) {
-  const familyName = families.find(f=>f.id===asset.family_id)?.name||null;
+  const family = families.find(f=>f.id===asset.family_id)||null;
+  const familyName = family?.name||null;
   const utilizador = utilizadores?.find(u=>u.id===asset.utilizador_id)||null;
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const allowedSecs = family?.sections ?? SECTIONS.map(s=>s.id);
+  const showSec = id => allowedSecs.includes(id);
 
   const Row = ({ label, value, mono }) => !value ? null : (
     <div style={{ display:"flex", gap:12, padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
@@ -594,11 +621,11 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
   );
 
   const sections = [
-    { title:"Computador", rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
-    { title:"Software",   rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
-    { title:"Monitor",    rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
-    { title:"Rede",       rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
-  ];
+    { id:"computador", title:"Computador", rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
+    { id:"software",   title:"Software",   rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
+    { id:"monitor",    title:"Monitor",    rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
+    { id:"rede",       title:"Rede",       rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
+  ].filter(s => showSec(s.id));
 
   const content = (
     <>
@@ -652,7 +679,7 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
             </div>
           );
         })}
-        {asset.observacoes && (
+        {showSec("observacoes") && asset.observacoes && (
           <>
             <SH label="Observações"/>
             <p style={{ fontSize:13, color:C.textS, lineHeight:1.8, padding:"10px 13px",
@@ -983,7 +1010,27 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
   const [saving, setSaving] = useState(false);
   const [newVal, setNewVal] = useState("");
   const [addErr, setAddErr] = useState("");
+  const [editingFamily, setEditingFamily] = useState(null);
+  const [familySections, setFamilySections] = useState([]);
   const fileRef = useRef();
+
+  const openEditFamily = f => {
+    setEditingFamily(f);
+    setFamilySections(f.sections ?? SECTIONS.map(s=>s.id));
+  };
+
+  const saveFamily = async () => {
+    try {
+      const res = await api.updateFamily(editingFamily.id, { sections: familySections });
+      onUpdate("families", families.map(f => f.id===editingFamily.id ? res[0] : f));
+      setEditingFamily(null);
+      showToast("Família atualizada.");
+    } catch { showToast("Erro ao guardar","error"); }
+  };
+
+  const toggleSec = id => setFamilySections(prev =>
+    prev.includes(id) ? prev.filter(s=>s!==id) : [...prev, id]
+  );
 
   const currentList = section==="families" ? families : section==="localizacoes" ? localizacoes : [];
   const nameKey = section==="families" ? "name" : "nome";
@@ -1173,15 +1220,63 @@ function SettingsPage({ families, localizacoes, utilizadores, onUpdate, showToas
             {currentList.map(item=>(
               <div key={item.id} style={{ background:C.surf, borderRadius:9, border:`1px solid ${C.border}`,
                 padding:"12px 13px", marginBottom:7, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <span style={{ fontSize:14, color:C.text }}>{item[nameKey]}</span>
-                <button onClick={()=>removeItem(item)} style={{ background:C.redL, border:"none",
-                  color:C.red, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
-                  Remover
-                </button>
+                <div>
+                  <span style={{ fontSize:14, color:C.text }}>{item[nameKey]}</span>
+                  {section==="families" && (
+                    <div style={{ fontSize:11, color:C.textD, marginTop:2 }}>
+                      {(item.sections ?? SECTIONS.map(s=>s.id)).map(id => SECTIONS.find(s=>s.id===id)?.label).filter(Boolean).join(", ") || "Sem secções"}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display:"flex", gap:6 }}>
+                  {section==="families" && (
+                    <button onClick={()=>openEditFamily(item)} style={{ background:C.surf2, border:`1px solid ${C.border2}`,
+                      color:C.textS, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                      Secções
+                    </button>
+                  )}
+                  <button onClick={()=>removeItem(item)} style={{ background:C.redL, border:"none",
+                    color:C.red, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                    Remover
+                  </button>
+                </div>
               </div>
             ))}
             {currentList.length===0 && (
               <p style={{ textAlign:"center", color:C.textD, fontSize:13, padding:"32px 0" }}>Nenhum registo.</p>
+            )}
+            {editingFamily && (
+              <Modal onClose={()=>setEditingFamily(null)} title={`Secções · ${editingFamily.name}`} isMobile={isMobile}>
+                <div style={{ padding:"16px 20px 24px" }}>
+                  <p style={{ fontSize:13, color:C.textS, marginBottom:16 }}>
+                    Seleciona as secções que aparecem nos ativos desta família.
+                  </p>
+                  {SECTIONS.map(s => {
+                    const on = familySections.includes(s.id);
+                    return (
+                      <div key={s.id} onClick={()=>toggleSec(s.id)}
+                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                          padding:"12px 14px", borderRadius:8, marginBottom:8, cursor:"pointer",
+                          border:`1.5px solid ${on?C.yellow:C.border2}`,
+                          background:on?C.yellowL:C.surf2, transition:"all .15s" }}>
+                        <span style={{ fontSize:14, fontWeight:on?600:400, color:on?C.yellow:C.text }}>{s.label}</span>
+                        <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${on?C.yellow:C.border2}`,
+                          background:on?C.yellow:"transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {on && <span style={{ color:C.bg, fontSize:11, fontWeight:800 }}>✓</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ display:"flex", gap:10, marginTop:16 }}>
+                    <button onClick={()=>setEditingFamily(null)} style={{ flex:1, padding:"11px", borderRadius:10,
+                      border:`1.5px solid ${C.border2}`, background:"transparent", color:C.textS,
+                      cursor:"pointer", fontSize:14, fontWeight:600 }}>Cancelar</button>
+                    <button onClick={saveFamily} style={{ flex:2, padding:"11px", borderRadius:10,
+                      border:"none", background:C.yellow, color:C.bg,
+                      cursor:"pointer", fontSize:14, fontWeight:700 }}>Guardar</button>
+                  </div>
+                </div>
+              </Modal>
             )}
           </>
         )}
