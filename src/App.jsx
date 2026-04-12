@@ -2,40 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 
 const SUPABASE_URL  = "https://swczwblrtwcyfklhapzz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3Y3p3YmxydHdjeWZrbGhhcHp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNjA2ODQsImV4cCI6MjA4ODgzNjY4NH0.9TMDFzKRvisg0_UkxNFvjxmje3prwdwvz-P3H7cLiPY";
-const SESSION_KEY = "gi_am_session";
-
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
-const auth = {
-  signIn: async (email, password) => {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method:"POST", headers:{ apikey:SUPABASE_ANON_KEY, "Content-Type":"application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error_description || data.msg || "Credenciais inválidas");
-    return data;
-  },
-  signOut: async (token) => {
-    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-      method:"POST", headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${token}` },
-    });
-  },
-  getUser: async (token) => {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  },
-};
+const PIN_KEY         = "gi_am_pin";
+const PIN_ENABLED_KEY = "gi_am_pin_enabled";
+const DEFAULT_PIN     = "0501";
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 async function sbFetch(path, options = {}) {
-  const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-  const token = session?.access_token || SUPABASE_ANON_KEY;
   const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
     ...options,
-    headers: { apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${token}`,
+    headers: { apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`,
       "Content-Type":"application/json", Prefer:options.prefer||"", ...options.headers },
   });
   if (!res.ok) { const e = await res.text(); throw new Error(e); }
@@ -66,11 +41,9 @@ const api = {
   updateUtilizador:  (id,d) => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
   deleteUtilizador:  (id)   => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"DELETE"}),
   uploadPhoto: async (file) => {
-    const session = JSON.parse(localStorage.getItem(SESSION_KEY)||"null");
-    const token = session?.access_token || SUPABASE_ANON_KEY;
     const filename = `${Date.now()}.${file.name.split(".").pop()}`;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${filename}`, {
-      method:"POST", headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${token}`, "Content-Type":file.type }, body:file,
+      method:"POST", headers:{ apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, "Content-Type":file.type }, body:file,
     });
     if (!res.ok) throw new Error("Upload falhou");
     return `${SUPABASE_URL}/storage/v1/object/public/photos/${filename}`;
@@ -130,6 +103,7 @@ input,select,textarea,button{font-family:${F}}
 @keyframes slideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 `;
 
 // ─── BREAKPOINT HOOK ──────────────────────────────────────────────────────────
@@ -239,7 +213,7 @@ const LS = { display:"block", fontSize:11, fontWeight:600, color:C.textD,
 // ─── SIDEBAR (DESKTOP) ────────────────────────────────────────────────────────
 const SIDEBAR_W = 220;
 
-function Sidebar({ active, onNav, onLogout }) {
+function Sidebar({ active, onNav, onLock }) {
   const items = [
     { id:"assets",   icon:"assets",   label:"Ativos" },
     { id:"settings", icon:"settings", label:"Definições" },
@@ -286,15 +260,17 @@ function Sidebar({ active, onNav, onLogout }) {
 
       {/* Footer */}
       <div style={{ padding:"10px 10px 16px", borderTop:`1px solid ${C.border}` }}>
-        <button onClick={onLogout}
-          style={{ width:"100%", display:"flex", alignItems:"center", gap:10,
-            padding:"10px 12px", borderRadius:8, border:"none", cursor:"pointer",
-            background:"transparent", color:C.textS, textAlign:"left", transition:"all .15s" }}
-          onMouseEnter={e=>{ e.currentTarget.style.background=C.redL; e.currentTarget.style.color=C.red; }}
-          onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}>
-          <Ico n="logout" s={17} c="currentColor"/>
-          <span style={{ fontSize:14, fontWeight:400 }}>Sair</span>
-        </button>
+        {localStorage.getItem(PIN_ENABLED_KEY)!=="false" && (
+          <button onClick={onLock}
+            style={{ width:"100%", display:"flex", alignItems:"center", gap:10,
+              padding:"10px 12px", borderRadius:8, border:"none", cursor:"pointer",
+              background:"transparent", color:C.textS, textAlign:"left", transition:"all .15s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}>
+            <Ico n="logout" s={17} c="currentColor"/>
+            <span style={{ fontSize:14, fontWeight:400 }}>Bloquear</span>
+          </button>
+        )}
         <p style={{ fontSize:10, color:C.textD, padding:"8px 12px 0", letterSpacing:"0.06em" }}>v2.0 · 2025</p>
       </div>
     </div>
@@ -1162,7 +1138,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios, onUpdate, showToast, onLogout, isMobile }) {
+function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios, onUpdate, showToast, onLock, isMobile }) {
   const [section, setSection] = useState(null);
   const [showUForm, setShowUForm] = useState(false);
   const [editingU, setEditingU] = useState(null);
@@ -1172,9 +1148,41 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   const [saving, setSaving] = useState(false);
   const [newVal, setNewVal] = useState("");
   const [addErr, setAddErr] = useState("");
-  const [editingFamily, setEditingFamily] = useState(null);
+  const [editingFamily,  setEditingFamily]  = useState(null);
   const [familySections, setFamilySections] = useState([]);
+  // Security
+  const [pinEnabled,    setPinEnabled]    = useState(() => localStorage.getItem(PIN_ENABLED_KEY) !== "false");
+  const [showChangePIN, setShowChangePIN] = useState(false);
+  const [cpStep,        setCpStep]        = useState(1);
+  const [cpPin1,        setCpPin1]        = useState([]);
+  const [cpPin2,        setCpPin2]        = useState([]);
+  const [cpShake,       setCpShake]       = useState(false);
+  const cpRef = useRef([]);
   const fileRef = useRef();
+
+  const cpPush = d => {
+    const cur = cpRef.current;
+    if (cur.length >= 4 || cpShake) return;
+    const next = [...cur, d];
+    cpRef.current = next;
+    if (cpStep===1) setCpPin1([...next]); else setCpPin2([...next]);
+    if (next.length === 4) {
+      if (cpStep===1) {
+        cpRef.current=[]; setCpStep(2); setCpPin2([]);
+      } else {
+        if (cpPin1.join("")===next.join("")) {
+          localStorage.setItem(PIN_KEY, next.join(""));
+          closeCpModal(); showToast("PIN atualizado.");
+        } else {
+          setCpShake(true);
+          setTimeout(()=>{ cpRef.current=[]; setCpPin2([]); setCpShake(false); }, 700);
+        }
+      }
+    }
+  };
+  const cpPop = () => { if(cpShake) return; const n=cpRef.current.slice(0,-1); cpRef.current=n; if(cpStep===1) setCpPin1([...n]); else setCpPin2([...n]); };
+  const closeCpModal = () => { setShowChangePIN(false); setCpStep(1); setCpPin1([]); setCpPin2([]); cpRef.current=[]; setCpShake(false); };
+  const togglePin = val => { setPinEnabled(val); localStorage.setItem(PIN_ENABLED_KEY, val?"true":"false"); showToast(val?"PIN ativado.":"PIN desativado."); };
 
   const openEditFamily = f => {
     setEditingFamily(f);
@@ -1259,11 +1267,12 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   };
 
   const MENU = [
-    { id:"families",     label:"Famílias",    count:families.length },
-    { id:"localizacoes", label:"Localizações",count:localizacoes.length },
-    { id:"marcas",       label:"Marcas",      count:marcas.length },
-    { id:"tarifarios",   label:"Tarifários",  count:tarifarios.length },
-    { id:"utilizadores", label:"Utilizadores",count:utilizadores.length },
+    { id:"families",     label:"Famílias",    count:families.length,     sub:null },
+    { id:"localizacoes", label:"Localizações",count:localizacoes.length, sub:null },
+    { id:"marcas",       label:"Marcas",      count:marcas.length,       sub:null },
+    { id:"tarifarios",   label:"Tarifários",  count:tarifarios.length,   sub:null },
+    { id:"utilizadores", label:"Utilizadores",count:utilizadores.length, sub:null },
+    { id:"seguranca",    label:"Segurança",   count:null,                sub:"PIN e acesso" },
   ];
 
   const padding = isMobile ? "16px" : "20px 24px";
@@ -1287,18 +1296,92 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
                 onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
                 <div>
                   <div style={{ fontSize:14, fontWeight:600, color:C.text }}>{item.label}</div>
-                  <div style={{ fontSize:12, color:C.textS, marginTop:2 }}>{item.count} registo(s)</div>
+                  <div style={{ fontSize:12, color:C.textS, marginTop:2 }}>{item.count!==null?`${item.count} registo(s)`:item.sub}</div>
                 </div>
                 <Ico n="chevR" s={16} c={C.textD}/>
               </div>
             ))}
-            <button onClick={onLogout}
-              style={{ width:"100%", marginTop:16, padding:"13px", borderRadius:10,
-                background:C.redL, border:`1px solid rgba(224,82,82,0.22)`,
-                color:C.red, cursor:"pointer", fontSize:14, fontWeight:600,
-                display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-              <Ico n="logout" s={17} c={C.red}/> Sair
-            </button>
+            {pinEnabled && (
+              <button onClick={onLock}
+                style={{ width:"100%", marginTop:16, padding:"13px", borderRadius:10,
+                  background:C.surf2, border:`1px solid ${C.border2}`,
+                  color:C.textS, cursor:"pointer", fontSize:14, fontWeight:600,
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                <Ico n="logout" s={17} c={C.textS}/> Bloquear
+              </button>
+            )}
+          </>
+        ) : section==="seguranca" ? (
+          <>
+            {/* PIN toggle */}
+            <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`,
+              padding:"14px 16px", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, color:C.text }}>Pedir PIN no arranque</div>
+                <div style={{ fontSize:12, color:C.textS, marginTop:2 }}>Protege o acesso à aplicação</div>
+              </div>
+              <div style={{ display:"flex", borderRadius:20, overflow:"hidden", border:`1px solid ${C.border2}` }}>
+                {[[true,"Ativo",C.green,C.greenL],[false,"Inativo",C.textD,C.surf3]].map(([val,label,col,bg])=>(
+                  <button key={String(val)} onClick={()=>togglePin(val)}
+                    style={{ padding:"7px 16px", border:"none", cursor:"pointer", fontSize:12, fontWeight:600,
+                      background:pinEnabled===val?bg:C.surf2, color:pinEnabled===val?col:C.textD, transition:"all .15s" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Change PIN */}
+            <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`,
+              padding:"14px 16px", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, color:C.text }}>PIN de acesso</div>
+                <div style={{ fontSize:12, color:C.textS, marginTop:2 }}>{"●".repeat(4)}</div>
+              </div>
+              <button onClick={()=>{ setShowChangePIN(true); setCpStep(1); setCpPin1([]); setCpPin2([]); cpRef.current=[]; }}
+                style={{ padding:"8px 16px", borderRadius:8, border:`1px solid ${C.border2}`,
+                  background:C.surf2, color:C.textS, cursor:"pointer", fontSize:13, fontWeight:600 }}>
+                Alterar PIN
+              </button>
+            </div>
+
+            {/* Change PIN modal */}
+            {showChangePIN && (
+              <Modal onClose={closeCpModal} title="Alterar PIN" isMobile={isMobile}>
+                <div style={{ padding:"16px 20px 28px", display:"flex", flexDirection:"column", alignItems:"center" }}>
+                  <p style={{ fontSize:13, color:C.textS, marginBottom:20, textAlign:"center" }}>
+                    {cpStep===1?"Introduz o novo PIN":"Confirma o novo PIN"}
+                  </p>
+                  <div style={{ display:"flex", gap:16, marginBottom:28, animation:cpShake?"shake .55s ease":"none" }}>
+                    {[0,1,2,3].map(i => {
+                      const cur = cpStep===1?cpPin1:cpPin2;
+                      return (
+                        <div key={i} style={{ width:13, height:13, borderRadius:"50%", transition:"all .15s",
+                          background:i<cur.length?(cpShake?C.red:C.yellow):"transparent",
+                          border:`2px solid ${i<cur.length?(cpShake?C.red:C.yellow):C.border2}` }}/>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,60px)", gap:10 }}>
+                    {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((n,i)=>n===""?<div key={i}/>:(
+                      <button key={i} onClick={()=>n==="⌫"?cpPop():cpPush(n)}
+                        style={{ width:60, height:60, borderRadius:"50%", border:`1.5px solid ${C.border2}`,
+                          background:C.surf2, color:n==="⌫"?C.textS:C.text,
+                          fontSize:n==="⌫"?18:22, fontWeight:500, cursor:"pointer", fontFamily:F,
+                          display:"flex", alignItems:"center", justifyContent:"center", transition:"all .1s" }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=C.yellow;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;}}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  {cpShake && <p style={{ marginTop:16, fontSize:13, color:C.red, fontWeight:600 }}>Os PINs não coincidem</p>}
+                  <button onClick={closeCpModal} style={{ marginTop:20, padding:"10px 24px", borderRadius:10,
+                    border:`1.5px solid ${C.border2}`, background:"transparent", color:C.textS,
+                    cursor:"pointer", fontSize:14, fontWeight:600 }}>Cancelar</button>
+                </div>
+              </Modal>
+            )}
           </>
         ) : section==="utilizadores" ? (
           <>
@@ -1455,31 +1538,50 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   );
 }
 
-// ─── LOGIN ────────────────────────────────────────────────────────────────────
-function Login({ onLogin }) {
-  const [email,    setEmail]    = useState("sergiohenriques@graficaideal.pt");
-  const [password, setPassword] = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
+// ─── PIN SCREEN ───────────────────────────────────────────────────────────────
+function PinScreen({ onUnlock }) {
+  const [digits, setDigits] = useState([]);
+  const [shake,  setShake]  = useState(false);
+  const digRef = useRef([]);
+  const pin = localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
 
-  const submit = async () => {
-    if (!email||!password) { setError("Preenche o email e a password."); return; }
-    setLoading(true); setError("");
-    try {
-      const session = await auth.signIn(email, password);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      onLogin(session);
-    } catch(err) { setError(err.message||"Email ou password incorretos."); }
-    finally { setLoading(false); }
+  const push = d => {
+    if (digRef.current.length >= 4 || shake) return;
+    const next = [...digRef.current, d];
+    digRef.current = next;
+    setDigits([...next]);
+    if (next.length === 4) {
+      if (next.join("") === pin) {
+        setTimeout(onUnlock, 120);
+      } else {
+        setShake(true);
+        setTimeout(() => { digRef.current = []; setDigits([]); setShake(false); }, 700);
+      }
+    }
   };
+
+  const pop = () => {
+    if (shake) return;
+    const next = digRef.current.slice(0,-1);
+    digRef.current = next; setDigits([...next]);
+  };
+
+  useEffect(() => {
+    const h = e => {
+      if (e.key>="0"&&e.key<="9") push(e.key);
+      else if (e.key==="Backspace") pop();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  });
+
+  const NUMS = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center", fontFamily:F, padding:"24px 20px" }}>
       <style>{CSS}</style>
-
-      {/* Logo */}
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14, marginBottom:36 }}>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14, marginBottom:44 }}>
         <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:60, height:60 }}/>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:28, fontWeight:700, color:C.text, letterSpacing:"-0.02em", lineHeight:1 }}>TechFlow</div>
@@ -1487,46 +1589,35 @@ function Login({ onLogin }) {
         </div>
       </div>
 
-      {/* Card */}
-      <div style={{ background:C.surf, borderRadius:20, width:"100%", maxWidth:400,
-        border:`1px solid ${C.border}`, boxShadow:"0 20px 60px rgba(0,0,0,0.4)",
-        overflow:"hidden", animation:"fadeUp .3s ease" }}>
-        <div style={{ padding:"24px 24px 8px" }}>
-          <h2 style={{ fontSize:22, fontWeight:700, color:C.text, letterSpacing:"-0.01em" }}>Entrar</h2>
-          <p style={{ fontSize:13, color:C.textS, marginTop:4 }}>Acesso restrito a utilizadores autorizados.</p>
-        </div>
-        <div style={{ padding:"16px 24px 28px", display:"flex", flexDirection:"column", gap:14 }}>
-          <div>
-            <label style={LS}>Email</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="utilizador@graficaideal.pt"
-              style={IS(!!error)} onFocus={e=>e.target.style.borderColor=C.yellow}
-              onBlur={e=>e.target.style.borderColor=error?C.red:C.border2}/>
-          </div>
-          <div>
-            <label style={LS}>Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••"
-              style={IS(!!error)} onFocus={e=>e.target.style.borderColor=C.yellow}
-              onBlur={e=>e.target.style.borderColor=error?C.red:C.border2}/>
-          </div>
-          {error && (
-            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 13px",
-              background:C.redL, borderRadius:10, border:`1px solid rgba(224,82,82,0.3)` }}>
-              <Ico n="x" s={13} c={C.red}/>
-              <span style={{ fontSize:13, color:C.red }}>{error}</span>
-            </div>
-          )}
-          <button onClick={submit} disabled={loading}
-            style={{ width:"100%", padding:"13px", borderRadius:12, border:"none",
-              background:C.yellow, color:C.bg, cursor:"pointer", fontSize:15, fontWeight:700,
-              opacity:loading?0.7:1, transition:"opacity .2s", marginTop:2 }}>
-            {loading?"A entrar...":"Entrar"}
-          </button>
-        </div>
+      <div style={{ display:"flex", gap:18, marginBottom:40, animation:shake?"shake .55s ease":"none" }}>
+        {[0,1,2,3].map(i=>(
+          <div key={i} style={{ width:14, height:14, borderRadius:"50%", transition:"all .15s",
+            background:i<digits.length?(shake?C.red:C.yellow):"transparent",
+            border:`2px solid ${i<digits.length?(shake?C.red:C.yellow):C.border2}` }}/>
+        ))}
       </div>
 
-      <p style={{ marginTop:28, fontSize:11, color:C.textD, letterSpacing:"0.08em" }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,72px)", gap:12 }}>
+        {NUMS.map((n,i)=> n===""?<div key={i}/>:(
+          <button key={i} onClick={()=>n==="⌫"?pop():push(n)}
+            style={{ width:72, height:72, borderRadius:"50%", border:`1.5px solid ${C.border2}`,
+              background:C.surf, color:n==="⌫"?C.textS:C.text,
+              fontSize:n==="⌫"?22:26, fontWeight:500, cursor:"pointer", fontFamily:F,
+              display:"flex", alignItems:"center", justifyContent:"center", transition:"all .1s" }}
+            onMouseEnter={e=>{e.currentTarget.style.background=C.surf2;e.currentTarget.style.borderColor=C.yellow;}}
+            onMouseLeave={e=>{e.currentTarget.style.background=C.surf;e.currentTarget.style.borderColor=C.border2;}}
+            onMouseDown={e=>e.currentTarget.style.transform="scale(0.91)"}
+            onMouseUp={e=>e.currentTarget.style.transform="scale(1)"}>
+            {n}
+          </button>
+        ))}
+      </div>
+
+      <p style={{ marginTop:28, fontSize:13, fontWeight:shake?600:400, letterSpacing:"0.02em",
+        color:shake?C.red:C.textD, transition:"color .15s" }}>
+        {shake?"PIN incorreto":"Introduz o PIN"}
+      </p>
+      <p style={{ marginTop:32, fontSize:11, color:C.textD, letterSpacing:"0.08em" }}>
         TechFlow · GI · {new Date().getFullYear()}
       </p>
     </div>
@@ -1535,8 +1626,9 @@ function Login({ onLogin }) {
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [session,      setSession]      = useState(() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)||"null"); } catch { return null; } });
-  const [authChecking, setAuthChecking] = useState(true);
+  const pinEnabled = () => localStorage.getItem(PIN_ENABLED_KEY) !== "false";
+
+  const [pinOk,        setPinOk]        = useState(() => !pinEnabled());
   const [assets,       setAssets]       = useState([]);
   const [families,     setFamilies]     = useState([]);
   const [localizacoes, setLocalizacoes] = useState([]);
@@ -1550,7 +1642,6 @@ export default function App() {
 
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null), 2800); };
 
-  // Favicon + title
   useEffect(() => {
     document.title = "TechFlow · GI";
     const b64 = btoa(unescape(encodeURIComponent(FAVICON)));
@@ -1560,31 +1651,14 @@ export default function App() {
     if (!document.querySelector("link[rel*='icon']")) document.head.appendChild(link);
   }, []);
 
-  // Auth check
   useEffect(() => {
-    (async () => {
-      const stored = JSON.parse(localStorage.getItem(SESSION_KEY)||"null");
-      if (!stored?.access_token) { setSession(null); setAuthChecking(false); setLoading(false); return; }
-      const user = await auth.getUser(stored.access_token);
-      if (!user) { localStorage.removeItem(SESSION_KEY); setSession(null); setAuthChecking(false); setLoading(false); return; }
-      setSession(stored); setAuthChecking(false);
-    })();
-  }, []);
-
-  // Load data
-  useEffect(() => {
-    if (!session) return;
     Promise.all([api.getAssets(), api.getFamilies(), api.getLocalizacoes(), api.getUtilizadores(), api.getMarcas(), api.getTarifarios()])
       .then(([a,f,l,u,m,t]) => { setAssets(a||[]); setFamilies(f||[]); setLocalizacoes(l||[]); setUtilizadores(u||[]); setMarcas(m||[]); setTarifarios(t||[]); })
       .catch(err => showToast("Erro ao carregar: "+(err.message||""),"error"))
       .finally(() => setLoading(false));
-  }, [session]);
+  }, []);
 
-  const handleLogout = async () => {
-    if (session?.access_token) await auth.signOut(session.access_token);
-    localStorage.removeItem(SESSION_KEY);
-    setSession(null); setAssets([]); setFamilies([]); setLocalizacoes([]); setUtilizadores([]);
-  };
+  const handleLock = () => { if (pinEnabled()) setPinOk(false); };
 
   const handleSaveAsset = (saved, wasEditing) => {
     setAssets(prev => wasEditing ? prev.map(a=>a.id===saved.id?saved:a) : [saved,...prev]);
@@ -1606,22 +1680,12 @@ export default function App() {
   const handleAddMarca     = item => setMarcas(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
   const handleAddTarifario = item => setTarifarios(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
 
-  // Guards
-  if (authChecking) return (
-    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <style>{CSS}</style><Spinner/>
-    </div>
-  );
-  if (!session) return <Login onLogin={s=>setSession(s)}/>;
+  if (!pinOk) return <PinScreen onUnlock={()=>setPinOk(true)}/>;
 
   return (
     <div style={{ display:"flex", height:"100vh", background:C.bg, fontFamily:F, overflow:"hidden" }}>
       <style>{CSS}</style>
-
-      {/* Desktop sidebar */}
-      {!isMobile && <Sidebar active={tab} onNav={setTab} onLogout={handleLogout}/>}
-
-      {/* Main content */}
+      {!isMobile && <Sidebar active={tab} onNav={setTab} onLock={handleLock}/>}
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden",
         paddingBottom: isMobile ? 60 : 0 }}>
         {tab==="assets" && (
@@ -1638,13 +1702,10 @@ export default function App() {
             families={families} localizacoes={localizacoes} utilizadores={utilizadores}
             marcas={marcas} tarifarios={tarifarios}
             onUpdate={handleSettingsUpdate} showToast={showToast}
-            onLogout={handleLogout} isMobile={isMobile}/>
+            onLock={handleLock} isMobile={isMobile}/>
         )}
       </div>
-
-      {/* Mobile bottom nav */}
       {isMobile && <BottomNav active={tab} onNav={setTab}/>}
-
       {toast && <Toast msg={toast.msg} type={toast.type}/>}
     </div>
   );
