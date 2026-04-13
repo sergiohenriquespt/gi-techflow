@@ -211,7 +211,7 @@ const LS = { display:"block", fontSize:11, fontWeight:600, color:C.textD,
   textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
 
 // ─── SIDEBAR (DESKTOP) ────────────────────────────────────────────────────────
-const SIDEBAR_W = 60;
+const SIDEBAR_W = 160;
 
 function Sidebar({ active, onNav, onLock }) {
   const items = [
@@ -221,53 +221,56 @@ function Sidebar({ active, onNav, onLock }) {
   return (
     <div style={{ width:SIDEBAR_W, minWidth:SIDEBAR_W, background:C.surf,
       borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column",
-      height:"100vh", position:"sticky", top:0, flexShrink:0, alignItems:"center" }}>
+      height:"100vh", position:"sticky", top:0, flexShrink:0 }}>
 
       {/* Logo */}
-      <div style={{ padding:"14px 0 12px", borderBottom:`1px solid ${C.border}`, width:"100%",
-        display:"flex", justifyContent:"center" }}>
-        <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:32, height:32, flexShrink:0 }}/>
+      <div style={{ padding:"16px 14px 14px", borderBottom:`1px solid ${C.border}` }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:34, height:34, flexShrink:0 }}/>
+          <div>
+            <div style={{ fontSize:14, fontWeight:700, color:C.text, letterSpacing:"-0.01em", lineHeight:1.1 }}>TechFlow</div>
+            <div style={{ fontSize:10, fontWeight:700, color:C.yellow, letterSpacing:"0.08em", marginTop:2 }}>GI</div>
+          </div>
+        </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex:1, padding:"10px 0 0", display:"flex", flexDirection:"column", alignItems:"center", width:"100%" }}>
+      <nav style={{ flex:1, padding:"10px 8px 0" }}>
+        <p style={{ fontSize:10, fontWeight:600, color:C.textD, letterSpacing:"0.12em",
+          textTransform:"uppercase", padding:"4px 6px 8px" }}>Menu</p>
         {items.map(item => {
           const active_ = active === item.id;
           return (
-            <div key={item.id} style={{ position:"relative", width:"100%", display:"flex", justifyContent:"center", marginBottom:4 }}
-              title={item.label}>
-              <button onClick={()=>onNav(item.id)}
-                style={{ width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center",
-                  borderRadius:8, border:"none", cursor:"pointer", transition:"all .15s",
-                  background:active_?C.yellowL:"transparent",
-                  color:active_?C.yellow:C.textS,
-                  outline:active_?`1.5px solid rgba(224,203,75,0.3)`:"none" }}
-                onMouseEnter={e=>{ if(!active_){ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}}
-                onMouseLeave={e=>{ if(!active_){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}}>
-                <Ico n={item.icon} s={20} c={active_?C.yellow:"currentColor"}/>
-              </button>
-              {active_ && <div style={{ position:"absolute", left:0, top:"50%", transform:"translateY(-50%)",
-                width:3, height:22, background:C.yellow, borderRadius:"0 2px 2px 0" }}/>}
-            </div>
+            <button key={item.id} onClick={()=>onNav(item.id)}
+              style={{ width:"100%", display:"flex", alignItems:"center", gap:9,
+                padding:"9px 10px", borderRadius:8, border:"none", cursor:"pointer",
+                marginBottom:2, textAlign:"left", transition:"all .15s",
+                background:active_?C.yellowL:"transparent",
+                color:active_?C.yellow:C.textS,
+                borderLeft:active_?`3px solid ${C.yellow}`:"3px solid transparent" }}
+              onMouseEnter={e=>{ if(!active_){ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}}
+              onMouseLeave={e=>{ if(!active_){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}}>
+              <Ico n={item.icon} s={17} c={active_?C.yellow:"currentColor"}/>
+              <span style={{ fontSize:13, fontWeight:active_?600:400 }}>{item.label}</span>
+            </button>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div style={{ padding:"10px 0 16px", borderTop:`1px solid ${C.border}`, width:"100%",
-        display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+      <div style={{ padding:"10px 8px 16px", borderTop:`1px solid ${C.border}` }}>
         {localStorage.getItem(PIN_ENABLED_KEY)!=="false" && (
-          <div title="Bloquear">
-            <button onClick={onLock}
-              style={{ width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center",
-                borderRadius:8, border:"none", cursor:"pointer",
-                background:"transparent", color:C.textS, transition:"all .15s" }}
-              onMouseEnter={e=>{ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}
-              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}>
-              <Ico n="logout" s={18} c="currentColor"/>
-            </button>
-          </div>
+          <button onClick={onLock}
+            style={{ width:"100%", display:"flex", alignItems:"center", gap:9,
+              padding:"9px 10px", borderRadius:8, border:"none", cursor:"pointer",
+              background:"transparent", color:C.textS, textAlign:"left", transition:"all .15s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}>
+            <Ico n="logout" s={16} c="currentColor"/>
+            <span style={{ fontSize:13 }}>Bloquear</span>
+          </button>
         )}
+        <p style={{ fontSize:10, color:C.textD, padding:"6px 10px 0", letterSpacing:"0.06em" }}>v2.0 · 2025</p>
       </div>
     </div>
   );
@@ -917,6 +920,208 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
   );
 }
 
+// ─── ASSET TABLE (desktop list) ───────────────────────────────────────────────
+const TBL_COL_ORDER  = "gi_am_col_order";
+const TBL_COL_WIDTHS = "gi_am_col_widths";
+const TBL_SORT       = "gi_am_col_sort";
+
+const TCOLS = [
+  { id:"name",        label:"Nome",        defW:220 },
+  { id:"family",      label:"Família",     defW:130 },
+  { id:"modelo",      label:"Modelo",      defW:150 },
+  { id:"serial",      label:"Serial",      defW:130 },
+  { id:"localizacao", label:"Localização", defW:155 },
+  { id:"so",          label:"S.O.",        defW:110 },
+  { id:"utilizador",  label:"Utilizador",  defW:165 },
+];
+
+function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
+  const getFam  = id => families.find(f=>f.id===id)?.name||"";
+  const getUtil = id => utilizadores.find(u=>u.id===id)||null;
+
+  const [order, setOrder] = useState(() => {
+    try { const s=JSON.parse(localStorage.getItem(TBL_COL_ORDER)); if(Array.isArray(s)&&s.length) return s; } catch {}
+    return TCOLS.map(c=>c.id);
+  });
+  const [widths, setWidths] = useState(() => {
+    try { const s=JSON.parse(localStorage.getItem(TBL_COL_WIDTHS)); if(s&&typeof s==="object") return s; } catch {}
+    return Object.fromEntries(TCOLS.map(c=>[c.id,c.defW]));
+  });
+  const [sort, setSort] = useState(() => {
+    try { const s=JSON.parse(localStorage.getItem(TBL_SORT)); if(s) return s; } catch {}
+    return { col:"name", dir:"asc" };
+  });
+  const [dragSrc, setDragSrc] = useState(null);
+  const [dragTgt, setDragTgt] = useState(null);
+
+  const cols   = order.map(id=>TCOLS.find(c=>c.id===id)).filter(Boolean);
+  const colW   = col => widths[col.id]||col.defW;
+  const cs     = w   => ({ flex:`0 0 ${w}px`, width:w, minWidth:w, overflow:"hidden" });
+
+  const sortVal = (a, col) => {
+    if (col==="family")    return getFam(a.family_id).toLowerCase();
+    if (col==="utilizador") return getUtil(a.utilizador_id)?.nome?.toLowerCase()||"";
+    return (a[col]||"").toLowerCase();
+  };
+  const sorted = [...rows].sort((a,b) => {
+    const va=sortVal(a,sort.col), vb=sortVal(b,sort.col);
+    return sort.dir==="asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  const doSort = colId => {
+    const s = sort.col===colId ? {col:colId,dir:sort.dir==="asc"?"desc":"asc"} : {col:colId,dir:"asc"};
+    setSort(s); localStorage.setItem(TBL_SORT, JSON.stringify(s));
+  };
+
+  const startResize = (e, colId) => {
+    e.preventDefault(); e.stopPropagation();
+    const x0=e.clientX, w0=widths[colId]||TCOLS.find(c=>c.id===colId)?.defW||100;
+    const onMove = ev => setWidths(p => ({...p,[colId]:Math.max(60,w0+ev.clientX-x0)}));
+    const onUp   = ()  => {
+      document.removeEventListener("mousemove",onMove);
+      document.removeEventListener("mouseup",onUp);
+      setWidths(p => { localStorage.setItem(TBL_COL_WIDTHS,JSON.stringify(p)); return p; });
+    };
+    document.addEventListener("mousemove",onMove);
+    document.addEventListener("mouseup",onUp);
+  };
+
+  const dropCol = tgt => {
+    if (!dragSrc||dragSrc===tgt) { setDragSrc(null); setDragTgt(null); return; }
+    const o=[...order], fi=o.indexOf(dragSrc), ti=o.indexOf(tgt);
+    o.splice(fi,1); o.splice(ti,0,dragSrc);
+    setOrder(o); localStorage.setItem(TBL_COL_ORDER,JSON.stringify(o));
+    setDragSrc(null); setDragTgt(null);
+  };
+
+  const renderCell = (colId, asset) => {
+    switch(colId) {
+      case "name": return (
+        <div>
+          <div style={{ fontSize:13, fontWeight:600, color:C.text,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.name}</div>
+          {asset.serial && <div style={{ fontSize:10, fontFamily:FM, color:C.textD, marginTop:1,
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.serial}</div>}
+        </div>
+      );
+      case "family":
+        return asset.family_id
+          ? <Badge label={getFam(asset.family_id)}/>
+          : <span style={{ fontSize:12, color:C.textD }}>—</span>;
+      case "modelo":
+        return <span style={{ fontSize:12, color:C.textS, display:"block",
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.modelo||"—"}</span>;
+      case "serial":
+        return <span style={{ fontSize:11, fontFamily:FM, color:C.textD, display:"block",
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.serial||"—"}</span>;
+      case "localizacao":
+        return <span style={{ fontSize:12, color:C.textD, display:"block",
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+          {asset.localizacao ? `📍 ${asset.localizacao}` : "—"}
+        </span>;
+      case "so":
+        return <span style={{ fontSize:12, color:C.textS,
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"block" }}>{asset.so||"—"}</span>;
+      case "utilizador": {
+        const u=getUtil(asset.utilizador_id);
+        return u
+          ? <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0 }}>
+              <Avatar src={u.photo_url} name={u.nome} size={22} round/>
+              <span style={{ fontSize:11, color:C.textS, overflow:"hidden",
+                textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.nome}</span>
+            </div>
+          : <span style={{ fontSize:12, color:C.textD }}>—</span>;
+      }
+      default: return null;
+    }
+  };
+
+  return (
+    <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflowX:"auto" }}>
+      <div style={{ minWidth: 44 + cols.reduce((s,c)=>s+colW(c),0) + 76 }}>
+
+        {/* ── Header ── */}
+        <div style={{ display:"flex", alignItems:"stretch", background:C.surf3,
+          borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ flex:"0 0 44px", width:44 }}/>
+          {cols.map(col => {
+            const w=colW(col), isSort=sort.col===col.id, isDrop=dragTgt===col.id, isDrag=dragSrc===col.id;
+            return (
+              <div key={col.id}
+                draggable
+                onDragStart={e=>{ e.dataTransfer.effectAllowed="move"; setDragSrc(col.id); }}
+                onDragOver={e=>{ e.preventDefault(); setDragTgt(col.id); }}
+                onDrop={()=>dropCol(col.id)}
+                onDragEnd={()=>{ setDragSrc(null); setDragTgt(null); }}
+                onClick={()=>doSort(col.id)}
+                title={`${col.label} — clique para ordenar, arraste para mover`}
+                style={{ ...cs(w), position:"relative", display:"flex", alignItems:"center",
+                  padding:"8px 20px 8px 8px", cursor:"pointer", userSelect:"none",
+                  opacity:isDrag?0.4:1,
+                  background:isDrop?C.surf2:isSort?"rgba(224,203,75,0.06)":"transparent",
+                  borderLeft:`2px solid ${isDrop?C.yellow:"transparent"}`,
+                  transition:"background .1s, opacity .1s" }}>
+                <span style={{ fontSize:10, fontWeight:600,
+                  color:isSort?C.yellow:C.textD,
+                  textTransform:"uppercase", letterSpacing:"0.08em",
+                  flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {col.label}
+                </span>
+                {isSort && <span style={{ fontSize:11, color:C.yellow, marginLeft:2, flexShrink:0 }}>
+                  {sort.dir==="asc"?"↑":"↓"}
+                </span>}
+                {/* Resize handle */}
+                <div
+                  onMouseDown={e=>startResize(e,col.id)}
+                  onClick={e=>e.stopPropagation()}
+                  title="Arrastar para redimensionar"
+                  style={{ position:"absolute", right:0, top:0, bottom:0, width:5, cursor:"col-resize", zIndex:3 }}
+                  onMouseEnter={e=>e.currentTarget.style.background=C.border2}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}/>
+              </div>
+            );
+          })}
+          <div style={{ flex:"0 0 76px", width:76 }}/>
+        </div>
+
+        {/* ── Rows ── */}
+        {sorted.map((asset,i) => (
+          <div key={asset.id} onClick={()=>onDetail(asset)}
+            style={{ display:"flex", alignItems:"center", cursor:"pointer",
+              borderBottom:i<sorted.length-1?`1px solid ${C.border}`:"none",
+              transition:"background .12s",
+              animation:`fadeUp .2s ease ${Math.min(i,.8)*.03}s both` }}
+            onMouseEnter={e=>e.currentTarget.style.background=C.surf2}
+            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            <div style={{ flex:"0 0 44px", width:44, padding:"8px 6px 8px 14px" }}>
+              <Avatar src={asset.photo_url} name={asset.name} size={28}/>
+            </div>
+            {cols.map(col => (
+              <div key={col.id} style={{ ...cs(colW(col)), padding:"8px 8px" }}>
+                {renderCell(col.id, asset)}
+              </div>
+            ))}
+            <div style={{ flex:"0 0 76px", width:76, display:"flex", gap:4,
+              justifyContent:"flex-end", padding:"8px 10px 8px 0" }}
+              onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>onEdit(asset)}
+                style={{ background:C.surf2, border:`1px solid ${C.border2}`, color:C.textS,
+                  borderRadius:6, padding:"5px 7px", cursor:"pointer", display:"flex" }}>
+                <Ico n="edit" s={13}/>
+              </button>
+              <button onClick={()=>onDetail(asset)}
+                style={{ background:C.surf3, border:`1px solid ${C.border2}`, color:C.textS,
+                  borderRadius:6, padding:"5px 7px", cursor:"pointer", display:"flex" }}>
+                <Ico n="chevR" s={13}/>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── ASSETS PAGE ──────────────────────────────────────────────────────────────
 function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tarifarios, onAddMarca, onAddTarifario, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
   const [search,       setSearch]       = useState("");
@@ -1042,67 +1247,12 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
               })}
             </div>
           ) : (
-            /* Desktop list — tabular layout */
-            <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden" }}>
-              {/* Header row */}
-              <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 140px 160px 160px 90px 80px",
-                padding:"8px 14px", background:C.surf3, borderBottom:`1px solid ${C.border}`,
-                gap:12, alignItems:"center" }}>
-                {["","Nome","Família","Modelo","Localização","Utilizador",""].map((h,i)=>(
-                  <span key={i} style={{ fontSize:10, fontWeight:600, color:C.textD,
-                    textTransform:"uppercase", letterSpacing:"0.08em" }}>{h}</span>
-                ))}
-              </div>
-              {filtered.map((asset,i) => {
-                const utilizador = utilizadores.find(u=>u.id===asset.utilizador_id)||null;
-                return (
-                  <div key={asset.id} onClick={()=>setDetailAsset(asset)}
-                    style={{ display:"grid", gridTemplateColumns:"40px 1fr 140px 160px 160px 90px 80px",
-                      padding:"9px 14px", gap:12, alignItems:"center", cursor:"pointer",
-                      borderBottom:i<filtered.length-1?`1px solid ${C.border}`:"none",
-                      transition:"background .12s",
-                      animation:`fadeUp .2s ease ${Math.min(i,.8)*.03}s both` }}
-                    onMouseEnter={e=>e.currentTarget.style.background=C.surf2}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <Avatar src={asset.photo_url} name={asset.name} size={32}/>
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:C.text,
-                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.name}</div>
-                    </div>
-                    <div>{asset.family_id && <Badge label={getFamilyName(asset.family_id)}/>}</div>
-                    <div style={{ fontSize:12, color:C.textS,
-                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.modelo||"—"}</div>
-                    <div style={{ fontSize:12, color:C.textD,
-                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                      {asset.localizacao ? <>📍 {asset.localizacao}</> : "—"}
-                    </div>
-                    <div>
-                      {utilizador
-                        ? <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                            <Avatar src={utilizador.photo_url} name={utilizador.nome} size={22} round/>
-                            <span style={{ fontSize:11, color:C.textS,
-                              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                              maxWidth:60 }}>{utilizador.nome.split(" ")[0]}</span>
-                          </div>
-                        : <span style={{ fontSize:12, color:C.textD }}>—</span>
-                      }
-                    </div>
-                    <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }} onClick={e=>e.stopPropagation()}>
-                      <button onClick={()=>{ setEditingAsset(asset); setShowForm(true); }}
-                        style={{ background:C.surf2, border:`1px solid ${C.border2}`, color:C.textS,
-                          borderRadius:6, padding:"5px 7px", cursor:"pointer", display:"flex" }}>
-                        <Ico n="edit" s={13}/>
-                      </button>
-                      <button onClick={()=>setDetailAsset(asset)}
-                        style={{ background:C.surf3, border:`1px solid ${C.border2}`, color:C.textS,
-                          borderRadius:6, padding:"5px 7px", cursor:"pointer", display:"flex" }}>
-                        <Ico n="chevR" s={13}/>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <AssetTable
+              rows={filtered}
+              families={families}
+              utilizadores={utilizadores}
+              onEdit={asset=>{ setEditingAsset(asset); setShowForm(true); }}
+              onDetail={setDetailAsset}/>
           )
         ) : (
           // Desktop grid
