@@ -211,7 +211,7 @@ const LS = { display:"block", fontSize:11, fontWeight:600, color:C.textD,
   textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
 
 // ─── SIDEBAR (DESKTOP) ────────────────────────────────────────────────────────
-const SIDEBAR_W = 220;
+const SIDEBAR_W = 60;
 
 function Sidebar({ active, onNav, onLock }) {
   const items = [
@@ -221,57 +221,53 @@ function Sidebar({ active, onNav, onLock }) {
   return (
     <div style={{ width:SIDEBAR_W, minWidth:SIDEBAR_W, background:C.surf,
       borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column",
-      height:"100vh", position:"sticky", top:0, flexShrink:0 }}>
+      height:"100vh", position:"sticky", top:0, flexShrink:0, alignItems:"center" }}>
 
       {/* Logo */}
-      <div style={{ padding:"20px 18px 16px", borderBottom:`1px solid ${C.border}` }}>
-        <div style={{ display:"flex", alignItems:"center", gap:11 }}>
-          <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:36, height:36, flexShrink:0 }}/>
-          <div>
-            <div style={{ fontSize:15, fontWeight:700, color:C.text, letterSpacing:"-0.01em", lineHeight:1.1 }}>TechFlow</div>
-            <div style={{ fontSize:10, fontWeight:700, color:C.yellow, letterSpacing:"0.06em", marginTop:2 }}>GI</div>
-          </div>
-        </div>
+      <div style={{ padding:"14px 0 12px", borderBottom:`1px solid ${C.border}`, width:"100%",
+        display:"flex", justifyContent:"center" }}>
+        <div dangerouslySetInnerHTML={{ __html: APP_ICON_SVG }} style={{ width:32, height:32, flexShrink:0 }}/>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex:1, padding:"10px 10px 0" }}>
-        <p style={{ fontSize:10, fontWeight:600, color:C.textD, letterSpacing:"0.12em",
-          textTransform:"uppercase", padding:"6px 8px 8px" }}>Menu</p>
+      <nav style={{ flex:1, padding:"10px 0 0", display:"flex", flexDirection:"column", alignItems:"center", width:"100%" }}>
         {items.map(item => {
           const active_ = active === item.id;
           return (
-            <button key={item.id} onClick={()=>onNav(item.id)}
-              style={{ width:"100%", display:"flex", alignItems:"center", gap:10,
-                padding:"10px 12px", borderRadius:8, border:"none", cursor:"pointer",
-                marginBottom:2, textAlign:"left", transition:"all .15s",
-                background:active_?C.yellowL:"transparent",
-                color:active_?C.yellow:C.textS,
-                borderLeft:active_?`3px solid ${C.yellow}`:"3px solid transparent" }}
-              onMouseEnter={e=>{ if(!active_){ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}}
-              onMouseLeave={e=>{ if(!active_){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}}>
-              <Ico n={item.icon} s={18} c={active_?C.yellow:C.textS}/>
-              <span style={{ fontSize:14, fontWeight:active_?600:400 }}>{item.label}</span>
-              {active_ && <div style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:C.yellow }}/>}
-            </button>
+            <div key={item.id} style={{ position:"relative", width:"100%", display:"flex", justifyContent:"center", marginBottom:4 }}
+              title={item.label}>
+              <button onClick={()=>onNav(item.id)}
+                style={{ width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center",
+                  borderRadius:8, border:"none", cursor:"pointer", transition:"all .15s",
+                  background:active_?C.yellowL:"transparent",
+                  color:active_?C.yellow:C.textS,
+                  outline:active_?`1.5px solid rgba(224,203,75,0.3)`:"none" }}
+                onMouseEnter={e=>{ if(!active_){ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}}
+                onMouseLeave={e=>{ if(!active_){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}}>
+                <Ico n={item.icon} s={20} c={active_?C.yellow:"currentColor"}/>
+              </button>
+              {active_ && <div style={{ position:"absolute", left:0, top:"50%", transform:"translateY(-50%)",
+                width:3, height:22, background:C.yellow, borderRadius:"0 2px 2px 0" }}/>}
+            </div>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div style={{ padding:"10px 10px 16px", borderTop:`1px solid ${C.border}` }}>
+      <div style={{ padding:"10px 0 16px", borderTop:`1px solid ${C.border}`, width:"100%",
+        display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
         {localStorage.getItem(PIN_ENABLED_KEY)!=="false" && (
-          <button onClick={onLock}
-            style={{ width:"100%", display:"flex", alignItems:"center", gap:10,
-              padding:"10px 12px", borderRadius:8, border:"none", cursor:"pointer",
-              background:"transparent", color:C.textS, textAlign:"left", transition:"all .15s" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}>
-            <Ico n="logout" s={17} c="currentColor"/>
-            <span style={{ fontSize:14, fontWeight:400 }}>Bloquear</span>
-          </button>
+          <div title="Bloquear">
+            <button onClick={onLock}
+              style={{ width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center",
+                borderRadius:8, border:"none", cursor:"pointer",
+                background:"transparent", color:C.textS, transition:"all .15s" }}
+              onMouseEnter={e=>{ e.currentTarget.style.background=C.surf2; e.currentTarget.style.color=C.text; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.textS; }}>
+              <Ico n="logout" s={18} c="currentColor"/>
+            </button>
+          </div>
         )}
-        <p style={{ fontSize:10, color:C.textD, padding:"8px 12px 0", letterSpacing:"0.06em" }}>v2.0 · 2025</p>
       </div>
     </div>
   );
@@ -1019,47 +1015,95 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
             <p style={{ marginTop:14, fontSize:15, color:C.textS, fontWeight:500 }}>Nenhum ativo encontrado</p>
           </div>
         ) : view==="list" || isMobile ? (
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {filtered.map((asset,i) => {
-              const utilizador = utilizadores.find(u=>u.id===asset.utilizador_id)||null;
-              return (
-                <div key={asset.id} onClick={()=>setDetailAsset(asset)}
-                  style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`,
-                    padding:"12px 14px", display:"flex", gap:12, alignItems:"center",
-                    cursor:"pointer", transition:"border-color .15s",
-                    animation:`fadeUp .25s ease ${Math.min(i,.8)*.04}s both` }}
-                  onMouseEnter={e=>e.currentTarget.style.borderColor=C.yellow}
-                  onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
-                  <Avatar src={asset.photo_url} name={asset.name} size={42}/>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:3 }}>{asset.name}</div>
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-                      {asset.family_id && <Badge label={getFamilyName(asset.family_id)}/>}
-                      {asset.modelo && <span style={{ fontSize:12, color:C.textS }}>{asset.modelo}</span>}
-                    </div>
-                    {asset.localizacao && <div style={{ fontSize:11, color:C.textD, marginTop:3 }}>📍 {asset.localizacao}</div>}
-                  </div>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5, flexShrink:0 }}>
-                    {utilizador && <Avatar src={utilizador.photo_url} name={utilizador.nome} size={24} round/>}
-                    {!isMobile && (
-                      <div style={{ display:"flex", gap:5 }} onClick={e=>e.stopPropagation()}>
-                        <button onClick={()=>{ setEditingAsset(asset); setShowForm(true); }}
-                          style={{ background:C.surf2, border:`1px solid ${C.border2}`, color:C.textS,
-                            borderRadius:6, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
-                          <Ico n="edit" s={13}/>
-                        </button>
-                        <button onClick={()=>{ setDetailAsset(asset); }}
-                          style={{ background:C.surf3, border:`1px solid ${C.border2}`, color:C.textS,
-                            borderRadius:6, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
-                          <Ico n="chevR" s={13}/>
-                        </button>
+          isMobile ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {filtered.map((asset,i) => {
+                const utilizador = utilizadores.find(u=>u.id===asset.utilizador_id)||null;
+                return (
+                  <div key={asset.id} onClick={()=>setDetailAsset(asset)}
+                    style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`,
+                      padding:"12px 14px", display:"flex", gap:12, alignItems:"center",
+                      cursor:"pointer", transition:"border-color .15s",
+                      animation:`fadeUp .25s ease ${Math.min(i,.8)*.04}s both` }}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor=C.yellow}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                    <Avatar src={asset.photo_url} name={asset.name} size={42}/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:3 }}>{asset.name}</div>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+                        {asset.family_id && <Badge label={getFamilyName(asset.family_id)}/>}
+                        {asset.modelo && <span style={{ fontSize:12, color:C.textS }}>{asset.modelo}</span>}
                       </div>
-                    )}
+                      {asset.localizacao && <div style={{ fontSize:11, color:C.textD, marginTop:3 }}>📍 {asset.localizacao}</div>}
+                    </div>
+                    {utilizador && <Avatar src={utilizador.photo_url} name={utilizador.nome} size={24} round/>}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Desktop list — tabular layout */
+            <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+              {/* Header row */}
+              <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 140px 160px 160px 90px 80px",
+                padding:"8px 14px", background:C.surf3, borderBottom:`1px solid ${C.border}`,
+                gap:12, alignItems:"center" }}>
+                {["","Nome","Família","Modelo","Localização","Utilizador",""].map((h,i)=>(
+                  <span key={i} style={{ fontSize:10, fontWeight:600, color:C.textD,
+                    textTransform:"uppercase", letterSpacing:"0.08em" }}>{h}</span>
+                ))}
+              </div>
+              {filtered.map((asset,i) => {
+                const utilizador = utilizadores.find(u=>u.id===asset.utilizador_id)||null;
+                return (
+                  <div key={asset.id} onClick={()=>setDetailAsset(asset)}
+                    style={{ display:"grid", gridTemplateColumns:"40px 1fr 140px 160px 160px 90px 80px",
+                      padding:"9px 14px", gap:12, alignItems:"center", cursor:"pointer",
+                      borderBottom:i<filtered.length-1?`1px solid ${C.border}`:"none",
+                      transition:"background .12s",
+                      animation:`fadeUp .2s ease ${Math.min(i,.8)*.03}s both` }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.surf2}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <Avatar src={asset.photo_url} name={asset.name} size={32}/>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.text,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.name}</div>
+                    </div>
+                    <div>{asset.family_id && <Badge label={getFamilyName(asset.family_id)}/>}</div>
+                    <div style={{ fontSize:12, color:C.textS,
+                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.modelo||"—"}</div>
+                    <div style={{ fontSize:12, color:C.textD,
+                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      {asset.localizacao ? <>📍 {asset.localizacao}</> : "—"}
+                    </div>
+                    <div>
+                      {utilizador
+                        ? <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <Avatar src={utilizador.photo_url} name={utilizador.nome} size={22} round/>
+                            <span style={{ fontSize:11, color:C.textS,
+                              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                              maxWidth:60 }}>{utilizador.nome.split(" ")[0]}</span>
+                          </div>
+                        : <span style={{ fontSize:12, color:C.textD }}>—</span>
+                      }
+                    </div>
+                    <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }} onClick={e=>e.stopPropagation()}>
+                      <button onClick={()=>{ setEditingAsset(asset); setShowForm(true); }}
+                        style={{ background:C.surf2, border:`1px solid ${C.border2}`, color:C.textS,
+                          borderRadius:6, padding:"5px 7px", cursor:"pointer", display:"flex" }}>
+                        <Ico n="edit" s={13}/>
+                      </button>
+                      <button onClick={()=>setDetailAsset(asset)}
+                        style={{ background:C.surf3, border:`1px solid ${C.border2}`, color:C.textS,
+                          borderRadius:6, padding:"5px 7px", cursor:"pointer", display:"flex" }}>
+                        <Ico n="chevR" s={13}/>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
           // Desktop grid
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:12 }}>
