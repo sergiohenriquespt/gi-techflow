@@ -924,31 +924,67 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 }
 
 // ─── ASSET TABLE (desktop list) ───────────────────────────────────────────────
-const TBL_COL_ORDER  = "gi_am_col_order";
-const TBL_COL_WIDTHS = "gi_am_col_widths";
-const TBL_SORT       = "gi_am_col_sort";
+const TBL_COL_ORDER   = "gi_am_col_order";
+const TBL_COL_WIDTHS  = "gi_am_col_widths";
+const TBL_SORT        = "gi_am_col_sort";
+const TBL_COL_VISIBLE = "gi_am_col_visible";
+const DEFAULT_VISIBLE = ["name","family","modelo","serial","localizacao","so","utilizador"];
 
-const TCOLS = [
-  { id:"name",        label:"Nome",        defW:220 },
-  { id:"family",      label:"Família",     defW:130 },
-  { id:"modelo",      label:"Modelo",      defW:150 },
-  { id:"serial",      label:"Serial",      defW:130 },
-  { id:"localizacao", label:"Localização", defW:155 },
-  { id:"so",          label:"S.O.",        defW:110 },
-  { id:"utilizador",  label:"Utilizador",  defW:165 },
+const ALL_COLS = [
+  // Geral
+  { id:"name",            label:"Nome",             section:"base",             defW:220, alwaysOn:true },
+  { id:"family",          label:"Família",           section:"base",             defW:130 },
+  { id:"utilizador",      label:"Utilizador",        section:"base",             defW:165 },
+  // Localização
+  { id:"localizacao",     label:"Localização",       section:"localizacao",      defW:155 },
+  // Computador
+  { id:"modelo",          label:"Modelo",            section:"computador",       defW:150 },
+  { id:"serial",          label:"Nº Série",          section:"computador",       defW:130 },
+  { id:"so",              label:"S.O.",              section:"computador",       defW:110 },
+  { id:"cpu",             label:"CPU",               section:"computador",       defW:140 },
+  { id:"memoria",         label:"RAM",               section:"computador",       defW:100 },
+  { id:"hdd",             label:"HDD / SSD",         section:"computador",       defW:120 },
+  { id:"gpu",             label:"GPU",               section:"computador",       defW:130 },
+  // Software
+  { id:"ms365",           label:"Microsoft 365",     section:"software",         defW:110 },
+  // Monitor
+  { id:"monitor_marca",   label:"Monitor (Marca)",   section:"monitor",          defW:130 },
+  { id:"monitor_modelo",  label:"Monitor (Modelo)",  section:"monitor",          defW:140 },
+  // Rede
+  { id:"dominio",         label:"Domínio",           section:"rede",             defW:130 },
+  { id:"grupo_trabalho",  label:"Grupo Trabalho",    section:"rede",             defW:130 },
+  // Dados Principais
+  { id:"telefone_numero", label:"Nº Telefone",       section:"dados_principais", defW:130 },
+  // Equipamento
+  { id:"equip_marca",     label:"Marca",             section:"equipamento",      defW:120 },
+  { id:"equip_modelo",    label:"Modelo (Equip.)",   section:"equipamento",      defW:140 },
+  { id:"equip_serial",    label:"Série (Equip.)",    section:"equipamento",      defW:140 },
+  { id:"equip_imei1",     label:"IMEI 1",            section:"equipamento",      defW:150 },
+  // Tarifário
+  { id:"tarif_nome",      label:"Tarifário",         section:"tarifario",        defW:130 },
 ];
+
+const COL_SECTION_LABELS = {
+  base:"Geral", localizacao:"Localização", computador:"Computador",
+  software:"Software", monitor:"Monitor", rede:"Rede",
+  dados_principais:"Dados Principais", equipamento:"Equipamento", tarifario:"Tarifário",
+};
 
 function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   const getFam  = id => families.find(f=>f.id===id)?.name||"";
   const getUtil = id => utilizadores.find(u=>u.id===id)||null;
 
+  const [visible] = useState(() => {
+    try { const s=JSON.parse(localStorage.getItem(TBL_COL_VISIBLE)); if(Array.isArray(s)&&s.length) return new Set(s); } catch {}
+    return new Set(DEFAULT_VISIBLE);
+  });
   const [order, setOrder] = useState(() => {
     try { const s=JSON.parse(localStorage.getItem(TBL_COL_ORDER)); if(Array.isArray(s)&&s.length) return s; } catch {}
-    return TCOLS.map(c=>c.id);
+    return DEFAULT_VISIBLE.slice();
   });
   const [widths, setWidths] = useState(() => {
     try { const s=JSON.parse(localStorage.getItem(TBL_COL_WIDTHS)); if(s&&typeof s==="object") return s; } catch {}
-    return Object.fromEntries(TCOLS.map(c=>[c.id,c.defW]));
+    return Object.fromEntries(ALL_COLS.map(c=>[c.id,c.defW]));
   });
   const [sort, setSort] = useState(() => {
     try { const s=JSON.parse(localStorage.getItem(TBL_SORT)); if(s) return s; } catch {}
@@ -957,7 +993,12 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   const [dragSrc, setDragSrc] = useState(null);
   const [dragTgt, setDragTgt] = useState(null);
 
-  const cols   = order.map(id=>TCOLS.find(c=>c.id===id)).filter(Boolean);
+  // Build visible cols: respects drag order; appends any newly-visible cols at end
+  const cols = (() => {
+    const ordered = order.filter(id => visible.has(id));
+    const extra   = [...visible].filter(id => !ordered.includes(id));
+    return [...ordered, ...extra].map(id => ALL_COLS.find(c=>c.id===id)).filter(Boolean);
+  })();
   const colW   = col => widths[col.id]||col.defW;
   const cs     = w   => ({ flex:`0 0 ${w}px`, width:w, minWidth:w, overflow:"hidden" });
 
@@ -978,7 +1019,7 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
 
   const startResize = (e, colId) => {
     e.preventDefault(); e.stopPropagation();
-    const x0=e.clientX, w0=widths[colId]||TCOLS.find(c=>c.id===colId)?.defW||100;
+    const x0=e.clientX, w0=widths[colId]||ALL_COLS.find(c=>c.id===colId)?.defW||100;
     const onMove = ev => setWidths(p => ({...p,[colId]:Math.max(60,w0+ev.clientX-x0)}));
     const onUp   = ()  => {
       document.removeEventListener("mousemove",onMove);
@@ -997,6 +1038,13 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
     setDragSrc(null); setDragTgt(null);
   };
 
+  const txt = (v, mono=false) => (
+    <span style={{ fontSize:mono?11:12, fontFamily:mono?FM:undefined, color:mono?C.textD:C.textS,
+      display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+      {v||"—"}
+    </span>
+  );
+
   const renderCell = (colId, asset) => {
     switch(colId) {
       case "name": return (
@@ -1011,20 +1059,6 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
         return asset.family_id
           ? <Badge label={getFam(asset.family_id)}/>
           : <span style={{ fontSize:12, color:C.textD }}>—</span>;
-      case "modelo":
-        return <span style={{ fontSize:12, color:C.textS, display:"block",
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.modelo||"—"}</span>;
-      case "serial":
-        return <span style={{ fontSize:11, fontFamily:FM, color:C.textD, display:"block",
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.serial||"—"}</span>;
-      case "localizacao":
-        return <span style={{ fontSize:12, color:C.textD, display:"block",
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-          {asset.localizacao ? `📍 ${asset.localizacao}` : "—"}
-        </span>;
-      case "so":
-        return <span style={{ fontSize:12, color:C.textS,
-          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"block" }}>{asset.so||"—"}</span>;
       case "utilizador": {
         const u=getUtil(asset.utilizador_id);
         return u
@@ -1035,6 +1069,32 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
             </div>
           : <span style={{ fontSize:12, color:C.textD }}>—</span>;
       }
+      case "localizacao":
+        return <span style={{ fontSize:12, color:C.textD, display:"block",
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+          {asset.localizacao ? `📍 ${asset.localizacao}` : "—"}
+        </span>;
+      case "modelo":        return txt(asset.modelo);
+      case "serial":        return txt(asset.serial, true);
+      case "so":            return txt(asset.so);
+      case "cpu":           return txt(asset.cpu);
+      case "memoria":       return txt(asset.memoria);
+      case "hdd":           return txt(asset.hdd);
+      case "gpu":           return txt(asset.gpu);
+      case "ms365":
+        return <span style={{ fontSize:12, color: asset.ms365===true?C.yellow:asset.ms365===false?C.textD:C.textD }}>
+          {asset.ms365===true?"Sim":asset.ms365===false?"Não":"—"}
+        </span>;
+      case "monitor_marca":   return txt(asset.monitor_marca);
+      case "monitor_modelo":  return txt(asset.monitor_modelo);
+      case "dominio":         return txt(asset.dominio);
+      case "grupo_trabalho":  return txt(asset.grupo_trabalho);
+      case "telefone_numero": return txt(asset.telefone_numero, true);
+      case "equip_marca":     return txt(asset.equip_marca);
+      case "equip_modelo":    return txt(asset.equip_modelo);
+      case "equip_serial":    return txt(asset.equip_serial, true);
+      case "equip_imei1":     return txt(asset.equip_imei1, true);
+      case "tarif_nome":      return txt(asset.tarif_nome);
       default: return null;
     }
   };
@@ -1463,13 +1523,29 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
     catch { showToast("Erro","error"); }
   };
 
+  const [colVisible, setColVisible] = useState(() => {
+    try { const s=JSON.parse(localStorage.getItem(TBL_COL_VISIBLE)); if(Array.isArray(s)&&s.length) return new Set(s); } catch {}
+    return new Set(DEFAULT_VISIBLE);
+  });
+
+  const toggleCol = id => {
+    if (ALL_COLS.find(c=>c.id===id)?.alwaysOn) return;
+    setColVisible(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      localStorage.setItem(TBL_COL_VISIBLE, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
   const MENU = [
-    { id:"families",     label:"Famílias",    count:families.length,     sub:null },
-    { id:"localizacoes", label:"Localizações",count:localizacoes.length, sub:null },
-    { id:"marcas",       label:"Marcas",      count:marcas.length,       sub:null },
-    { id:"tarifarios",   label:"Tarifários",  count:tarifarios.length,   sub:null },
-    { id:"utilizadores", label:"Utilizadores",count:utilizadores.length, sub:null },
-    { id:"seguranca",    label:"Segurança",   count:null,                sub:"PIN e acesso" },
+    { id:"families",     label:"Famílias",        count:families.length,     sub:null },
+    { id:"localizacoes", label:"Localizações",     count:localizacoes.length, sub:null },
+    { id:"marcas",       label:"Marcas",           count:marcas.length,       sub:null },
+    { id:"tarifarios",   label:"Tarifários",       count:tarifarios.length,   sub:null },
+    { id:"utilizadores", label:"Utilizadores",     count:utilizadores.length, sub:null },
+    { id:"colunas",      label:"Colunas da Lista", count:null,                sub:"Configurar colunas visíveis" },
+    { id:"seguranca",    label:"Segurança",        count:null,                sub:"PIN e acesso" },
   ];
 
   const padding = isMobile ? "16px" : "20px 24px";
@@ -1507,6 +1583,48 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
                 <Ico n="logout" s={17} c={C.textS}/> Bloquear
               </button>
             )}
+          </>
+        ) : section==="colunas" ? (
+          <>
+            <p style={{ fontSize:13, color:C.textS, marginBottom:16, lineHeight:1.6 }}>
+              Seleciona as colunas que aparecem na vista em modo de lista. A coluna <strong style={{ color:C.text }}>Nome</strong> está sempre visível.
+            </p>
+            {Object.entries(
+              ALL_COLS.reduce((acc, col) => {
+                if (!acc[col.section]) acc[col.section] = [];
+                acc[col.section].push(col);
+                return acc;
+              }, {})
+            ).map(([sec, cols]) => (
+              <div key={sec} style={{ marginBottom:18 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.yellow, textTransform:"uppercase",
+                  letterSpacing:"0.12em", marginBottom:8 }}>{COL_SECTION_LABELS[sec]||sec}</div>
+                {cols.map(col => {
+                  const on = colVisible.has(col.id);
+                  const locked = !!col.alwaysOn;
+                  return (
+                    <div key={col.id} onClick={()=>!locked&&toggleCol(col.id)}
+                      style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                        padding:"10px 14px", borderRadius:8, marginBottom:6,
+                        border:`1.5px solid ${on?C.yellow:C.border2}`,
+                        background:on?C.yellowL:C.surf2,
+                        cursor:locked?"default":"pointer", opacity:locked?0.6:1,
+                        transition:"all .15s" }}>
+                      <span style={{ fontSize:13, fontWeight:on?600:400, color:on?C.yellow:C.text }}>
+                        {col.label}
+                        {locked && <span style={{ fontSize:10, color:C.textD, marginLeft:6, fontWeight:400 }}>(sempre visível)</span>}
+                      </span>
+                      <div style={{ width:18, height:18, borderRadius:5,
+                        border:`2px solid ${on?C.yellow:C.border2}`,
+                        background:on?C.yellow:"transparent",
+                        display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        {on && <span style={{ color:C.bg, fontSize:11, fontWeight:800 }}>✓</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </>
         ) : section==="seguranca" ? (
           <>
