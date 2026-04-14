@@ -890,17 +890,20 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
     );
   }
 
-  // Desktop: slide-in panel
+  // Desktop: centered modal
   return (
     <div style={{ position:"fixed", inset:0, zIndex:300,
-      background:"rgba(0,0,0,0.4)", animation:"fadeIn .2s" }}
+      background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
+      display:"flex", alignItems:"center", justifyContent:"center", padding:16,
+      animation:"fadeIn .2s" }}
       onClick={onClose}>
-      <div style={{ position:"absolute", right:0, top:0, bottom:0, width:400, background:C.surf,
-        borderLeft:`1px solid ${C.border}`, display:"flex", flexDirection:"column",
-        animation:"slideIn .22s ease", overflowY:"hidden" }}
+      <div style={{ background:C.surf, borderRadius:12, width:"100%", maxWidth:520,
+        border:`1px solid ${C.border}`, boxShadow:"0 24px 60px rgba(0,0,0,0.5)",
+        overflow:"hidden", maxHeight:"88vh", display:"flex", flexDirection:"column",
+        animation:"fadeUp .2s ease" }}
         onClick={e=>e.stopPropagation()}>
-        {/* Panel header */}
-        <div style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`,
+        {/* Modal header */}
+        <div style={{ padding:"18px 24px 14px", borderBottom:`1px solid ${C.border}`,
           display:"flex", alignItems:"center", justifyContent:"space-between",
           background:C.surf3, flexShrink:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
