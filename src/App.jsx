@@ -992,15 +992,6 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   });
   const [dragSrc, setDragSrc] = useState(null);
   const [dragTgt, setDragTgt] = useState(null);
-  const containerRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, []);
 
   // Build visible cols: respects drag order; appends any newly-visible cols at end
   const cols = (() => {
@@ -1009,13 +1000,9 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
     return [...ordered, ...extra].map(id => ALL_COLS.find(c=>c.id===id)).filter(Boolean);
   })();
 
-  const totalDefW = cols.reduce((s,c) => s + c.defW, 0);
-  const colW = col => {
-    if (col.id in widths) return widths[col.id];
-    if (containerWidth > 120) return Math.max(60, Math.floor((col.defW / totalDefW) * (containerWidth - 44 - 76)));
-    return col.defW;
-  };
-  const cs = w => ({ flex:`0 0 ${w}px`, width:w, minWidth:w, overflow:"hidden" });
+  // colW returns a flex weight (relative, not pixels) — columns distribute proportionally
+  const colW = col => widths[col.id] || col.defW;
+  const cs   = w   => ({ flex:`${w} ${w} 0`, minWidth:50, overflow:"hidden", boxSizing:"border-box" });
 
   const sortVal = (a, col) => {
     if (col==="family")    return getFam(a.family_id).toLowerCase();
@@ -1034,9 +1021,14 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
 
   const startResize = (e, colId) => {
     e.preventDefault(); e.stopPropagation();
-    const col=ALL_COLS.find(c=>c.id===colId);
-    const x0=e.clientX, w0=colW(col)||100;
-    const onMove = ev => setWidths(p => ({...p,[colId]:Math.max(60,w0+ev.clientX-x0)}));
+    const col = ALL_COLS.find(c => c.id === colId);
+    const w0  = colW(col);
+    const px0 = e.currentTarget.parentElement.getBoundingClientRect().width;
+    const x0  = e.clientX;
+    const onMove = ev => {
+      const newPx = Math.max(50, px0 + ev.clientX - x0);
+      setWidths(p => ({...p, [colId]: Math.round(w0 * newPx / px0)}));
+    };
     const onUp   = ()  => {
       document.removeEventListener("mousemove",onMove);
       document.removeEventListener("mouseup",onUp);
@@ -1116,8 +1108,8 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   };
 
   return (
-    <div ref={containerRef} style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflowX:"auto" }}>
-      <div style={{ width:"100%", minWidth:400 }}>
+    <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+      <div style={{ width:"100%" }}>
 
         {/* ── Header ── */}
         <div style={{ display:"flex", alignItems:"stretch", background:C.surf3,
