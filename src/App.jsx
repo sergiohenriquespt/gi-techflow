@@ -925,7 +925,7 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 
 // ─── ASSET TABLE (desktop list) ───────────────────────────────────────────────
 const TBL_COL_ORDER   = "gi_am_col_order";
-const TBL_COL_WIDTHS  = "gi_am_col_widths";
+const TBL_COL_WIDTHS  = "gi_am_col_widths_v2";
 const TBL_SORT        = "gi_am_col_sort";
 const TBL_COL_VISIBLE = "gi_am_col_visible";
 const DEFAULT_VISIBLE = ["name","family","modelo","serial","localizacao","so","utilizador"];
@@ -984,7 +984,7 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   });
   const [widths, setWidths] = useState(() => {
     try { const s=JSON.parse(localStorage.getItem(TBL_COL_WIDTHS)); if(s&&typeof s==="object") return s; } catch {}
-    return Object.fromEntries(ALL_COLS.map(c=>[c.id,c.defW]));
+    return {};
   });
   const [sort, setSort] = useState(() => {
     try { const s=JSON.parse(localStorage.getItem(TBL_SORT)); if(s) return s; } catch {}
@@ -992,6 +992,15 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   });
   const [dragSrc, setDragSrc] = useState(null);
   const [dragTgt, setDragTgt] = useState(null);
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(([e]) => setContainerWidth(e.contentRect.width));
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   // Build visible cols: respects drag order; appends any newly-visible cols at end
   const cols = (() => {
@@ -999,8 +1008,14 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
     const extra   = [...visible].filter(id => !ordered.includes(id));
     return [...ordered, ...extra].map(id => ALL_COLS.find(c=>c.id===id)).filter(Boolean);
   })();
-  const colW   = col => widths[col.id]||col.defW;
-  const cs     = w   => ({ flex:`0 0 ${w}px`, width:w, minWidth:w, overflow:"hidden" });
+
+  const totalDefW = cols.reduce((s,c) => s + c.defW, 0);
+  const colW = col => {
+    if (col.id in widths) return widths[col.id];
+    if (containerWidth > 120) return Math.max(60, Math.floor((col.defW / totalDefW) * (containerWidth - 44 - 76)));
+    return col.defW;
+  };
+  const cs = w => ({ flex:`0 0 ${w}px`, width:w, minWidth:w, overflow:"hidden" });
 
   const sortVal = (a, col) => {
     if (col==="family")    return getFam(a.family_id).toLowerCase();
@@ -1019,7 +1034,8 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
 
   const startResize = (e, colId) => {
     e.preventDefault(); e.stopPropagation();
-    const x0=e.clientX, w0=widths[colId]||ALL_COLS.find(c=>c.id===colId)?.defW||100;
+    const col=ALL_COLS.find(c=>c.id===colId);
+    const x0=e.clientX, w0=colW(col)||100;
     const onMove = ev => setWidths(p => ({...p,[colId]:Math.max(60,w0+ev.clientX-x0)}));
     const onUp   = ()  => {
       document.removeEventListener("mousemove",onMove);
@@ -1100,8 +1116,8 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
   };
 
   return (
-    <div style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflowX:"auto" }}>
-      <div style={{ minWidth: 44 + cols.reduce((s,c)=>s+colW(c),0) + 76 }}>
+    <div ref={containerRef} style={{ background:C.surf, borderRadius:10, border:`1px solid ${C.border}`, overflowX:"auto" }}>
+      <div style={{ width:"100%", minWidth:400 }}>
 
         {/* ── Header ── */}
         <div style={{ display:"flex", alignItems:"stretch", background:C.surf3,
