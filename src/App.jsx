@@ -134,6 +134,7 @@ const PATHS = {
   chevR:    "M9 18l6-6-6-6",
   filter:   "M22 3H2l8 9.46V19l4 2v-8.54L22 3",
   grid:     "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+  check:    "M20 6L9 17l-5-5",
   list:     "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
 };
 
@@ -329,7 +330,7 @@ function TopBar({ title, onBack, action, isMobile }) {
 
 // ─── MODAL / SHEET ────────────────────────────────────────────────────────────
 // Desktop: centrado; Mobile: bottom sheet
-function Modal({ onClose, children, title, isMobile }) {
+function Modal({ onClose, children, title, action, isMobile }) {
   if (isMobile) {
     return (
       <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}
@@ -346,11 +347,14 @@ function Modal({ onClose, children, title, isMobile }) {
             <div style={{ padding:"4px 20px 14px", display:"flex", alignItems:"center",
               justifyContent:"space-between", borderBottom:`1px solid ${C.border}` }}>
               <h2 style={{ fontSize:17, fontWeight:700, color:C.text }}>{title}</h2>
-              <button onClick={onClose} style={{ background:C.surf2, border:`1px solid ${C.border2}`,
-                color:C.textS, borderRadius:8, width:30, height:30, cursor:"pointer",
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <Ico n="x" s={14}/>
-              </button>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                {action}
+                <button onClick={onClose} style={{ background:C.surf2, border:`1px solid ${C.border2}`,
+                  color:C.textS, borderRadius:8, width:30, height:30, cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Ico n="x" s={14}/>
+                </button>
+              </div>
             </div>
           )}
           <div style={{ overflowY:"auto", flex:1 }}>{children}</div>
@@ -375,11 +379,14 @@ function Modal({ onClose, children, title, isMobile }) {
             display:"flex", alignItems:"center", justifyContent:"space-between",
             background:C.surf3, flexShrink:0 }}>
             <h2 style={{ fontSize:16, fontWeight:700, color:C.text }}>{title}</h2>
-            <button onClick={onClose} style={{ background:"transparent", border:`1px solid ${C.border2}`,
-              color:C.textS, borderRadius:6, width:30, height:30, cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Ico n="x" s={14}/>
-            </button>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              {action}
+              <button onClick={onClose} style={{ background:"transparent", border:`1px solid ${C.border2}`,
+                color:C.textS, borderRadius:6, width:30, height:30, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Ico n="x" s={14}/>
+              </button>
+            </div>
           </div>
         )}
         <div style={{ overflowY:"auto", flex:1 }}>{children}</div>
@@ -724,7 +731,23 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
   );
 
   return (
-    <Modal onClose={onClose} title={asset?.id?"Editar Ativo":"Novo Ativo"} isMobile={isMobile}>
+    <Modal onClose={onClose} title={asset?.id?"Editar Ativo":"Novo Ativo"} isMobile={isMobile}
+      action={
+        <>
+          <button onClick={submit} disabled={saving||uploading} title="Gravar"
+            style={{ background:C.yellow, border:"none", color:C.bg, borderRadius:6,
+              width:30, height:30, cursor:"pointer", display:"flex", alignItems:"center",
+              justifyContent:"center", opacity:(saving||uploading)?0.6:1 }}>
+            <Ico n="check" s={14} c={C.bg}/>
+          </button>
+          <button onClick={onClose} title="Cancelar"
+            style={{ background:"transparent", border:`1px solid ${C.border2}`,
+              color:C.textS, borderRadius:6, width:30, height:30, cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <Ico n="x" s={14}/>
+          </button>
+        </>
+      }>
       {content}
     </Modal>
   );
