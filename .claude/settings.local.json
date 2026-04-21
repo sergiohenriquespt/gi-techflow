@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm run *)",
       "Bash(npx react-scripts *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(git stash *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)"
     ]
   }
 }
