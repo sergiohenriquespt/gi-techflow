@@ -733,20 +733,12 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
   return (
     <Modal onClose={onClose} title={asset?.id?"Editar Ativo":"Novo Ativo"} isMobile={isMobile}
       action={
-        <>
-          <button onClick={submit} disabled={saving||uploading} title="Gravar"
-            style={{ background:C.yellow, border:"none", color:C.bg, borderRadius:6,
-              width:30, height:30, cursor:"pointer", display:"flex", alignItems:"center",
-              justifyContent:"center", opacity:(saving||uploading)?0.6:1 }}>
-            <Ico n="check" s={14} c={C.bg}/>
-          </button>
-          <button onClick={onClose} title="Cancelar"
-            style={{ background:"transparent", border:`1px solid ${C.border2}`,
-              color:C.textS, borderRadius:6, width:30, height:30, cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <Ico n="x" s={14}/>
-          </button>
-        </>
+        <button onClick={submit} disabled={saving||uploading} title="Gravar"
+          style={{ background:C.yellow, border:"none", color:C.bg, borderRadius:6,
+            width:30, height:30, cursor:"pointer", display:"flex", alignItems:"center",
+            justifyContent:"center", opacity:(saving||uploading)?0.6:1 }}>
+          <Ico n="check" s={14} c={C.bg}/>
+        </button>
       }>
       {content}
     </Modal>
