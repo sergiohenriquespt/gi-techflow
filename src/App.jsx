@@ -911,11 +911,26 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
             <span style={{ fontSize:11, fontWeight:600, color:C.yellow,
               textTransform:"uppercase", letterSpacing:"0.12em" }}>Detalhe do Ativo</span>
           </div>
-          <button onClick={onClose} style={{ background:"transparent", border:`1px solid ${C.border2}`,
-            color:C.textS, borderRadius:6, width:28, height:28, cursor:"pointer",
-            display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <Ico n="x" s={13}/>
-          </button>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <button onClick={onEdit} title="Editar"
+              style={{ background:"transparent", border:`1px solid ${C.border2}`,
+                color:C.textS, borderRadius:6, width:28, height:28, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <Ico n="edit" s={13}/>
+            </button>
+            <button onClick={()=>setConfirmDelete(true)} title="Remover"
+              style={{ background:"transparent", border:`1px solid rgba(224,82,82,0.35)`,
+                color:C.red, borderRadius:6, width:28, height:28, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <Ico n="trash" s={13} c={C.red}/>
+            </button>
+            <button onClick={onClose} title="Fechar"
+              style={{ background:"transparent", border:`1px solid ${C.border2}`,
+                color:C.textS, borderRadius:6, width:28, height:28, cursor:"pointer",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <Ico n="x" s={13}/>
+            </button>
+          </div>
         </div>
         <div style={{ overflowY:"auto", flex:1 }}>{content}</div>
       </div>
