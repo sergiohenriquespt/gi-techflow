@@ -157,7 +157,8 @@ const Ico = ({ n, s=20, c="currentColor", w=1.8 }) => (
 // ─── SMALL COMPONENTS ─────────────────────────────────────────────────────────
 const EMPTY_FORM = {
   name:"", family_id:"", photo_url:"",
-  modelo:"", serial:"", cpu:"", memoria:"", hdd:"", gpu:"", so:"",
+  modelo:"", serial:"", cpu:"", memoria:"", hdd:"", gpu:"", so:"", so_serial:"",
+  servidor_tipo:"",
   ms365:null, localizacao:"",
   monitor_marca:"", monitor_modelo:"", monitor_polegadas:"", monitor_quantidade:"",
   dominio:"", grupo_trabalho:"", observacoes:"", utilizador_id:"",
@@ -485,6 +486,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
         name:form.name, family_id:form.family_id||null, photo_url:form.photo_url||null,
         modelo:form.modelo||null, serial:form.serial||null, cpu:form.cpu||null,
         memoria:form.memoria||null, hdd:form.hdd||null, gpu:form.gpu||null, so:form.so||null,
+        so_serial:form.so_serial||null, servidor_tipo:form.servidor_tipo||null,
         ms365:form.ms365===true?true:form.ms365===false?false:null,
         localizacao:form.localizacao||null,
         monitor_marca:form.monitor_marca||null, monitor_modelo:form.monitor_modelo||null,
@@ -518,6 +520,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
   const selectedFamily = families.find(f => f.id === form.family_id);
   const allowedSecs = selectedFamily?.sections ?? SECTIONS.map(s => s.id);
   const showSec = id => !form.family_id || allowedSecs.includes(id);
+  const isServidor = selectedFamily?.name?.toLowerCase() === "servidor";
 
   const padding = isMobile ? "16px 20px 24px" : "20px 24px 24px";
   const gridCols = isMobile ? "1fr" : "1fr 1fr";
@@ -628,15 +631,33 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
           computador: (
             <>
               <SH label="Hardware"/>
+              {isServidor && (
+                <div style={{ marginBottom:10 }}>
+                  <label style={LS}>Tipo de Servidor</label>
+                  <div style={{ display:"flex", borderRadius:8, overflow:"hidden", border:`1px solid ${C.border2}` }}>
+                    {[["fisico","Físico"],["virtual","Virtual"]].map(([val,label],i)=>{
+                      const active = form.servidor_tipo === val;
+                      return (
+                        <button key={val} type="button" onClick={()=>set("servidor_tipo",val)}
+                          style={{ flex:1, padding:"9px", border:"none", cursor:"pointer", fontSize:13, fontWeight:600,
+                            background:active?C.yellowL:C.surf2, color:active?C.yellow:C.textD,
+                            borderRight:i===0?`1px solid ${C.border2}`:"none", transition:"all .15s" }}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
                 {[
-                  { k:"modelo",  l:"Modelo",          full:true,  ph:"Ex: HP EliteBook 840 G9" },
-                  { k:"serial",  l:"Número de Série", full:true,  ph:"Ex: 5CG24818B4" },
-                  { k:"cpu",     l:"CPU",             full:false, ph:"Ex: Intel Core i7-1255U" },
-                  { k:"memoria", l:"Memória RAM",     full:false, ph:"Ex: 16GB DDR5" },
-                  { k:"hdd",     l:"HDD / SSD",       full:false, ph:"Ex: 512GB NVMe" },
-                  { k:"gpu",     l:"GPU",             full:false, ph:"Ex: Intel Iris Xe" },
-                ].map(f=>(
+                  { k:"modelo",  l:"Modelo",          full:true,  ph:"Ex: Dell PowerEdge R750",   hide: isServidor && form.servidor_tipo==="virtual" },
+                  { k:"serial",  l:"Número de Série", full:true,  ph:"Ex: 5CG24818B4",            hide: isServidor && form.servidor_tipo==="virtual" },
+                  { k:"cpu",     l:"CPU",             full:false, ph:"Ex: Intel Xeon Silver 4314" },
+                  { k:"memoria", l:"Memória RAM",     full:false, ph:"Ex: 64GB ECC DDR4" },
+                  { k:"hdd",     l:"HDD / SSD",       full:false, ph:"Ex: 2x 960GB SSD RAID1" },
+                  { k:"gpu",     l:"GPU",             full:false, ph:"Ex: Intel Iris Xe",         hide: isServidor && form.servidor_tipo==="virtual" },
+                ].filter(f=>!f.hide).map(f=>(
                   <div key={f.k} style={ (!isMobile && f.full) ? {gridColumn:"1/-1"} : {} }>
                     <label style={LS}>{f.l}</label>
                     <input {...iP(f.k)} placeholder={f.ph}/>
@@ -672,6 +693,12 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
                   </select>
                 )}
               </div>
+              {form.so && (
+                <div style={{ marginBottom:10 }}>
+                  <label style={LS}>Serial do S.O.</label>
+                  <input {...iP("so_serial")} placeholder="Ex: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"/>
+                </div>
+              )}
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"12px 14px", background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
                 <span style={{ fontSize:14, color:C.textS }}>Microsoft 365</span>
@@ -919,10 +946,21 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 
   const fmtDate = v => { if (!v) return null; const [y,m,d]=v.split("-"); return `${d}/${m}/${y}`; };
 
+  const isServidorDetail = familyName?.toLowerCase() === "servidor";
+  const isVirtualServer  = isServidorDetail && asset.servidor_tipo === "virtual";
+
   const sectionDefs = {
     localizacao:      { title:"Localização",      rows:[["Localização",asset.localizacao]] },
-    computador:       { title:"Hardware",          rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu]] },
-    software:         { title:"Software",         rows:[["S.O.",asset.so],["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
+    computador: (() => {
+      const rows = [
+        ...(isServidorDetail ? [["Tipo", asset.servidor_tipo==="virtual"?"Virtual":asset.servidor_tipo==="fisico"?"Físico":null]] : []),
+        ...(!isVirtualServer ? [["Modelo",asset.modelo],["Nº Série",asset.serial,true]] : []),
+        ["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],
+        ...(!isVirtualServer ? [["GPU",asset.gpu]] : []),
+      ];
+      return { title:"Hardware", rows };
+    })(),
+    software:         { title:"Software",         rows:[["S.O.",asset.so],["Serial S.O.",asset.so_serial,true],["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
     monitor:          { title:"Monitor",          rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
     rede:             { title:"Rede",             rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
     dados_principais: { title:"Dados Principais", rows:[["Número",asset.telefone_numero]] },
