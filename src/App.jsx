@@ -521,7 +521,14 @@ function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas
   const selectedFamily = families.find(f => f.id === form.family_id);
   const allowedSecs = selectedFamily?.sections ?? SECTIONS.map(s => s.id);
   const showSec = id => !form.family_id || allowedSecs.includes(id);
-  const isServidor = selectedFamily?.name?.toLowerCase() === "servidor";
+  const isServidor  = selectedFamily?.name?.toLowerCase() === "servidor";
+  const isVirtual   = isServidor && form.servidor_tipo === "virtual";
+  const physServers = isVirtual
+    ? (assets||[]).filter(a => {
+        const fam = families.find(f => f.id === a.family_id);
+        return fam?.name?.toLowerCase() === "servidor" && a.servidor_tipo === "fisico" && a.id !== asset?.id;
+      })
+    : [];
 
   const padding = isMobile ? "16px 20px 24px" : "20px 24px 24px";
   const gridCols = isMobile ? "1fr" : "1fr 1fr";
@@ -650,30 +657,24 @@ function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas
                   </div>
                 </div>
               )}
-              {isServidor && form.servidor_tipo==="virtual" && (
+              {isVirtual && (
                 <div style={{ marginBottom:10 }}>
                   <label style={LS}>Dependência</label>
                   <select value={form.servidor_dependencia||""} onChange={e=>set("servidor_dependencia",e.target.value)}
                     style={{ ...IS(), cursor:"pointer" }}>
                     <option value="">— Selecionar servidor físico —</option>
-                    {(assets||[])
-                      .filter(a => {
-                        const fam = families.find(f=>f.id===a.family_id);
-                        return fam?.name?.toLowerCase()==="servidor" && a.servidor_tipo==="fisico" && a.id!==asset?.id;
-                      })
-                      .map(a => <option key={a.id} value={a.id}>{a.name}</option>)
-                    }
+                    {physServers.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
               )}
               <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
                 {[
-                  { k:"modelo",  l:"Modelo",          full:true,  ph:"Ex: Dell PowerEdge R750",   hide: isServidor && form.servidor_tipo==="virtual" },
-                  { k:"serial",  l:"Número de Série", full:true,  ph:"Ex: 5CG24818B4",            hide: isServidor && form.servidor_tipo==="virtual" },
+                  { k:"modelo",  l:"Modelo",          full:true,  ph:"Ex: Dell PowerEdge R750",   hide: isVirtual },
+                  { k:"serial",  l:"Número de Série", full:true,  ph:"Ex: 5CG24818B4",            hide: isVirtual },
                   { k:"cpu",     l:"CPU",             full:false, ph:"Ex: Intel Xeon Silver 4314" },
                   { k:"memoria", l:"Memória RAM",     full:false, ph:"Ex: 64GB ECC DDR4" },
                   { k:"hdd",     l:"HDD / SSD",       full:false, ph:"Ex: 2x 960GB SSD RAID1" },
-                  { k:"gpu",     l:"GPU",             full:false, ph:"Ex: Intel Iris Xe",         hide: isServidor && form.servidor_tipo==="virtual" },
+                  { k:"gpu",     l:"GPU",             full:false, ph:"Ex: Intel Iris Xe",         hide: isVirtual },
                 ].filter(f=>!f.hide).map(f=>(
                   <div key={f.k} style={ (!isMobile && f.full) ? {gridColumn:"1/-1"} : {} }>
                     <label style={LS}>{f.l}</label>
