@@ -1320,14 +1320,31 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
 
   const renderCell = (colId, asset) => {
     switch(colId) {
-      case "name": return (
-        <div>
-          <div style={{ fontSize:13, fontWeight:600, color:C.text,
-            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.name}</div>
-          {asset.serial && <div style={{ fontSize:10, fontFamily:FM, color:C.textD, marginTop:1,
-            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.serial}</div>}
-        </div>
-      );
+      case "name": {
+        const famName = getFam(asset.family_id).toLowerCase();
+        const tipoLabel = famName==="servidor" && asset.servidor_tipo
+          ? (asset.servidor_tipo==="virtual" ? "Virtual" : "Físico")
+          : null;
+        return (
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0 }}>
+              <span style={{ fontSize:13, fontWeight:600, color:C.text,
+                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.name}</span>
+              {tipoLabel && (
+                <span style={{ fontSize:10, fontWeight:600, flexShrink:0,
+                  color:tipoLabel==="Virtual"?C.yellow:C.textS,
+                  background:tipoLabel==="Virtual"?C.yellowL:C.surf3,
+                  border:`1px solid ${tipoLabel==="Virtual"?"rgba(224,203,75,0.3)":C.border2}`,
+                  borderRadius:4, padding:"1px 5px", letterSpacing:"0.04em" }}>
+                  {tipoLabel}
+                </span>
+              )}
+            </div>
+            {asset.serial && <div style={{ fontSize:10, fontFamily:FM, color:C.textD, marginTop:1,
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{asset.serial}</div>}
+          </div>
+        );
+      }
       case "family":
         return asset.family_id
           ? <Badge label={getFam(asset.family_id)}/>
