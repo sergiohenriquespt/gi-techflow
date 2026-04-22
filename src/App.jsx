@@ -158,7 +158,7 @@ const Ico = ({ n, s=20, c="currentColor", w=1.8 }) => (
 const EMPTY_FORM = {
   name:"", family_id:"", photo_url:"",
   modelo:"", serial:"", cpu:"", memoria:"", hdd:"", gpu:"", so:"", so_serial:"",
-  servidor_tipo:"",
+  servidor_tipo:"", servidor_dependencia:"",
   ms365:null, localizacao:"",
   monitor_marca:"", monitor_modelo:"", monitor_polegadas:"", monitor_quantidade:"",
   dominio:"", grupo_trabalho:"", observacoes:"", utilizador_id:"",
@@ -408,7 +408,7 @@ function Modal({ onClose, children, title, action, isMobile }) {
 }
 
 // ─── ASSET FORM ───────────────────────────────────────────────────────────────
-function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, sistemasOperativos, onAddMarca, onAddTarifario, onAddSO, onSave, onClose, showToast, isMobile }) {
+function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas, tarifarios, sistemasOperativos, onAddMarca, onAddTarifario, onAddSO, onSave, onClose, showToast, isMobile }) {
   const [form,           setForm]           = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset, credentials:asset?.credentials||[]});
   const [preview,        setPreview]        = useState(asset?.photo_url||null);
   const [uploading,      setUploading]      = useState(false);
@@ -487,6 +487,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
         modelo:form.modelo||null, serial:form.serial||null, cpu:form.cpu||null,
         memoria:form.memoria||null, hdd:form.hdd||null, gpu:form.gpu||null, so:form.so||null,
         so_serial:form.so_serial||null, servidor_tipo:form.servidor_tipo||null,
+        servidor_dependencia:form.servidor_dependencia||null,
         ms365:form.ms365===true?true:form.ms365===false?false:null,
         localizacao:form.localizacao||null,
         monitor_marca:form.monitor_marca||null, monitor_modelo:form.monitor_modelo||null,
@@ -638,7 +639,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
                     {[["fisico","Físico"],["virtual","Virtual"]].map(([val,label],i)=>{
                       const active = form.servidor_tipo === val;
                       return (
-                        <button key={val} type="button" onClick={()=>set("servidor_tipo",val)}
+                        <button key={val} type="button" onClick={()=>{ set("servidor_tipo",val); if(val!=="virtual") set("servidor_dependencia",""); }}
                           style={{ flex:1, padding:"9px", border:"none", cursor:"pointer", fontSize:13, fontWeight:600,
                             background:active?C.yellowL:C.surf2, color:active?C.yellow:C.textD,
                             borderRight:i===0?`1px solid ${C.border2}`:"none", transition:"all .15s" }}>
@@ -647,6 +648,22 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
                       );
                     })}
                   </div>
+                </div>
+              )}
+              {isServidor && form.servidor_tipo==="virtual" && (
+                <div style={{ marginBottom:10 }}>
+                  <label style={LS}>Dependência</label>
+                  <select value={form.servidor_dependencia||""} onChange={e=>set("servidor_dependencia",e.target.value)}
+                    style={{ ...IS(), cursor:"pointer" }}>
+                    <option value="">— Selecionar servidor físico —</option>
+                    {(assets||[])
+                      .filter(a => {
+                        const fam = families.find(f=>f.id===a.family_id);
+                        return fam?.name?.toLowerCase()==="servidor" && a.servidor_tipo==="fisico" && a.id!==asset?.id;
+                      })
+                      .map(a => <option key={a.id} value={a.id}>{a.name}</option>)
+                    }
+                  </select>
                 </div>
               )}
               <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
@@ -914,7 +931,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
 
 // ─── ASSET DETAIL ─────────────────────────────────────────────────────────────
 // Desktop: painel deslizante lateral; Mobile: página própria
-function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose, isMobile }) {
+function AssetDetail({ asset, assets, families, utilizadores, onEdit, onDelete, onClose, isMobile }) {
   const family = families.find(f=>f.id===asset.family_id)||null;
   const familyName = family?.name||null;
   const utilizador = utilizadores?.find(u=>u.id===asset.utilizador_id)||null;
@@ -952,8 +969,12 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
   const sectionDefs = {
     localizacao:      { title:"Localização",      rows:[["Localização",asset.localizacao]] },
     computador: (() => {
+      const depName = isVirtualServer && asset.servidor_dependencia
+        ? (assets||[]).find(a=>a.id===asset.servidor_dependencia)?.name || null
+        : null;
       const rows = [
         ...(isServidorDetail ? [["Tipo", asset.servidor_tipo==="virtual"?"Virtual":asset.servidor_tipo==="fisico"?"Físico":null]] : []),
+        ...(isVirtualServer ? [["Dependência", depName]] : []),
         ...(!isVirtualServer ? [["Modelo",asset.modelo],["Nº Série",asset.serial,true]] : []),
         ["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],
         ...(!isVirtualServer ? [["GPU",asset.gpu]] : []),
@@ -1647,7 +1668,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
       {/* Detail */}
       {detailAsset && (
         <AssetDetail asset={assets.find(a=>a.id===detailAsset.id)||detailAsset}
-          families={families} utilizadores={utilizadores} isMobile={isMobile}
+          assets={assets} families={families} utilizadores={utilizadores} isMobile={isMobile}
           onEdit={()=>{ setEditingAsset(assets.find(a=>a.id===detailAsset.id)||detailAsset); setShowForm(true); setDetailAsset(null); }}
           onDelete={()=>handleDelete(detailAsset)}
           onClose={()=>setDetailAsset(null)}/>
@@ -1655,7 +1676,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
 
       {/* Form */}
       {showForm && (
-        <AssetForm asset={editingAsset} families={families} localizacoes={localizacoes}
+        <AssetForm asset={editingAsset} assets={assets} families={families} localizacoes={localizacoes}
           utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios}
           sistemasOperativos={sistemasOperativos}
           onAddMarca={onAddMarca} onAddTarifario={onAddTarifario} onAddSO={onAddSO}
