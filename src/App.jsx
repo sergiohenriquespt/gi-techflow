@@ -34,9 +34,13 @@ const api = {
   getMarcas:         ()     => sbFetch("/gi_am_marcas?select=*&order=nome.asc"),
   addMarca:          (nome) => sbFetch("/gi_am_marcas",                   {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
   deleteMarca:       (id)   => sbFetch(`/gi_am_marcas?id=eq.${id}`,      {method:"DELETE"}),
-  getTarifarios:     ()     => sbFetch("/gi_am_tarifarios?select=*&order=nome.asc"),
-  addTarifario:      (nome) => sbFetch("/gi_am_tarifarios",               {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
-  deleteTarifario:   (id)   => sbFetch(`/gi_am_tarifarios?id=eq.${id}`,  {method:"DELETE"}),
+  getTarifarios:          ()     => sbFetch("/gi_am_tarifarios?select=*&order=nome.asc"),
+  addTarifario:           (nome) => sbFetch("/gi_am_tarifarios",                        {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
+  deleteTarifario:        (id)   => sbFetch(`/gi_am_tarifarios?id=eq.${id}`,           {method:"DELETE"}),
+  getSistemasOperativos:  ()     => sbFetch("/gi_am_sistemas_operativos?select=*&order=nome.asc"),
+  addSistemaOperativo:    (nome) => sbFetch("/gi_am_sistemas_operativos",               {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
+  deleteSistemaOperativo: (id)   => sbFetch(`/gi_am_sistemas_operativos?id=eq.${id}`,  {method:"DELETE"}),
+  getAssetsWithSO:        (nome) => sbFetch(`/gi_am_assets?so=eq.${encodeURIComponent(nome)}&select=id,name`),
   addUtilizador:     (d)    => sbFetch("/gi_am_utilizadores",             {method:"POST",  prefer:"return=representation", body:JSON.stringify(d)}),
   updateUtilizador:  (id,d) => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
   deleteUtilizador:  (id)   => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"DELETE"}),
@@ -75,7 +79,7 @@ const FM = "'Outfit', monospace";
 const SECTIONS = [
   { id:"credenciais",      label:"Credenciais" },
   { id:"localizacao",      label:"Localização" },
-  { id:"computador",       label:"Computador" },
+  { id:"computador",       label:"Hardware" },
   { id:"software",         label:"Software" },
   { id:"monitor",          label:"Monitor" },
   { id:"rede",             label:"Rede" },
@@ -401,7 +405,7 @@ function Modal({ onClose, children, title, action, isMobile }) {
 }
 
 // ─── ASSET FORM ───────────────────────────────────────────────────────────────
-function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, onAddMarca, onAddTarifario, onSave, onClose, showToast, isMobile }) {
+function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, sistemasOperativos, onAddMarca, onAddTarifario, onAddSO, onSave, onClose, showToast, isMobile }) {
   const [form,           setForm]           = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset, credentials:asset?.credentials||[]});
   const [preview,        setPreview]        = useState(asset?.photo_url||null);
   const [uploading,      setUploading]      = useState(false);
@@ -411,6 +415,8 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
   const [newMarcaVal,    setNewMarcaVal]    = useState("");
   const [newTarifMode,   setNewTarifMode]   = useState(false);
   const [newTarifVal,    setNewTarifVal]    = useState("");
+  const [newSOMode,      setNewSOMode]      = useState(false);
+  const [newSOVal,       setNewSOVal]       = useState("");
   const [showPwds,       setShowPwds]       = useState(new Set());
   const [copiedFormCred, setCopiedFormCred] = useState(null);
   const copyFormTimers = useRef({});
@@ -448,6 +454,16 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
       set("tarif_nome", res[0].nome);
       setNewTarifMode(false); setNewTarifVal("");
     } catch { showToast("Erro ao criar tarifário","error"); }
+  };
+
+  const saveSO = async () => {
+    if (!newSOVal.trim()) return;
+    try {
+      const res = await api.addSistemaOperativo(newSOVal.trim());
+      onAddSO(res[0]);
+      set("so", res[0].nome);
+      setNewSOMode(false); setNewSOVal("");
+    } catch { showToast("Erro ao criar S.O.","error"); }
   };
 
   const handlePhoto = async (e) => {
@@ -609,16 +625,15 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
           ),
           computador: (
             <>
-              <SH label="Computador"/>
+              <SH label="Hardware"/>
               <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
                 {[
-                  { k:"modelo",  l:"Modelo",            full:true,  ph:"Ex: HP EliteBook 840 G9" },
-                  { k:"serial",  l:"Número de Série",   full:true,  ph:"Ex: 5CG24818B4" },
-                  { k:"cpu",     l:"CPU",               full:false, ph:"Ex: Intel Core i7-1255U" },
-                  { k:"memoria", l:"Memória RAM",       full:false, ph:"Ex: 16GB DDR5" },
-                  { k:"hdd",     l:"HDD / SSD",         full:false, ph:"Ex: 512GB NVMe" },
-                  { k:"gpu",     l:"GPU",               full:false, ph:"Ex: Intel Iris Xe" },
-                  { k:"so",      l:"Sistema Operativo", full:true,  ph:"Ex: Windows 11 Pro" },
+                  { k:"modelo",  l:"Modelo",          full:true,  ph:"Ex: HP EliteBook 840 G9" },
+                  { k:"serial",  l:"Número de Série", full:true,  ph:"Ex: 5CG24818B4" },
+                  { k:"cpu",     l:"CPU",             full:false, ph:"Ex: Intel Core i7-1255U" },
+                  { k:"memoria", l:"Memória RAM",     full:false, ph:"Ex: 16GB DDR5" },
+                  { k:"hdd",     l:"HDD / SSD",       full:false, ph:"Ex: 512GB NVMe" },
+                  { k:"gpu",     l:"GPU",             full:false, ph:"Ex: Intel Iris Xe" },
                 ].map(f=>(
                   <div key={f.k} style={ (!isMobile && f.full) ? {gridColumn:"1/-1"} : {} }>
                     <label style={LS}>{f.l}</label>
@@ -631,6 +646,30 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
           software: (
             <>
               <SH label="Software"/>
+              <div style={{ marginBottom:10 }}>
+                <label style={LS}>Sistema Operativo</label>
+                {newSOMode ? (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <input value={newSOVal} onChange={e=>setNewSOVal(e.target.value)}
+                      onKeyDown={e=>e.key==="Enter"&&saveSO()}
+                      placeholder="Ex: Windows 11 Pro" autoFocus
+                      style={{ ...IS(), flex:1 }}
+                      onFocus={e=>e.target.style.borderColor=C.yellow}
+                      onBlur={e=>e.target.style.borderColor=C.border2}/>
+                    <button onClick={saveSO} style={{ padding:"0 14px", borderRadius:8, border:"none",
+                      background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
+                    <button onClick={()=>{ setNewSOMode(false); setNewSOVal(""); }}
+                      style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
+                      background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
+                  </div>
+                ) : (
+                  <select value={form.so||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewSOMode(true); } else { set("so",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
+                    <option value="">— Selecionar —</option>
+                    {(sistemasOperativos||[]).map(s=><option key={s.id} value={s.nome}>{s.nome}</option>)}
+                    <option value="__new__">＋ Adicionar novo S.O....</option>
+                  </select>
+                )}
+              </div>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"12px 14px", background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
                 <span style={{ fontSize:14, color:C.textS }}>Microsoft 365</span>
@@ -880,8 +919,8 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 
   const sectionDefs = {
     localizacao:      { title:"Localização",      rows:[["Localização",asset.localizacao]] },
-    computador:       { title:"Computador",       rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
-    software:         { title:"Software",         rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
+    computador:       { title:"Hardware",          rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu]] },
+    software:         { title:"Software",         rows:[["S.O.",asset.so],["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
     monitor:          { title:"Monitor",          rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
     rede:             { title:"Rede",             rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
     dados_principais: { title:"Dados Principais", rows:[["Número",asset.telefone_numero]] },
@@ -1123,15 +1162,15 @@ const ALL_COLS = [
   { id:"utilizador",      label:"Utilizador",        section:"base",             defW:165 },
   // Localização
   { id:"localizacao",     label:"Localização",       section:"localizacao",      defW:155 },
-  // Computador
+  // Hardware
   { id:"modelo",          label:"Modelo",            section:"computador",       defW:150 },
   { id:"serial",          label:"Nº Série",          section:"computador",       defW:130 },
-  { id:"so",              label:"S.O.",              section:"computador",       defW:110 },
   { id:"cpu",             label:"CPU",               section:"computador",       defW:140 },
   { id:"memoria",         label:"RAM",               section:"computador",       defW:100 },
   { id:"hdd",             label:"HDD / SSD",         section:"computador",       defW:120 },
   { id:"gpu",             label:"GPU",               section:"computador",       defW:130 },
   // Software
+  { id:"so",              label:"S.O.",              section:"software",         defW:110 },
   { id:"ms365",           label:"Microsoft 365",     section:"software",         defW:110 },
   // Monitor
   { id:"monitor_marca",   label:"Monitor (Marca)",   section:"monitor",          defW:130 },
@@ -1151,7 +1190,7 @@ const ALL_COLS = [
 ];
 
 const COL_SECTION_LABELS = {
-  base:"Geral", localizacao:"Localização", computador:"Computador",
+  base:"Geral", localizacao:"Localização", computador:"Hardware",
   software:"Software", monitor:"Monitor", rede:"Rede",
   dados_principais:"Dados Principais", equipamento:"Equipamento", tarifario:"Tarifário",
 };
@@ -1380,7 +1419,7 @@ function AssetTable({ rows, families, utilizadores, onEdit, onDetail }) {
 }
 
 // ─── ASSETS PAGE ──────────────────────────────────────────────────────────────
-function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tarifarios, onAddMarca, onAddTarifario, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
+function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tarifarios, sistemasOperativos, onAddMarca, onAddTarifario, onAddSO, loading, onSaveAsset, onDeleteAsset, showToast, isMobile }) {
   const [search,       setSearch]       = useState("");
   const [filterFamily, setFilterFamily] = useState("all");
   const [view,         setView]         = useState("list");
@@ -1561,7 +1600,8 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
       {showForm && (
         <AssetForm asset={editingAsset} families={families} localizacoes={localizacoes}
           utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios}
-          onAddMarca={onAddMarca} onAddTarifario={onAddTarifario}
+          sistemasOperativos={sistemasOperativos}
+          onAddMarca={onAddMarca} onAddTarifario={onAddTarifario} onAddSO={onAddSO}
           onSave={handleSave} isMobile={isMobile}
           onClose={()=>{ setShowForm(false); setEditingAsset(null); }} showToast={showToast}/>
       )}
@@ -1589,7 +1629,7 @@ function AssetsPage({ assets, families, localizacoes, utilizadores, marcas, tari
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios, onUpdate, showToast, onLock, isMobile }) {
+function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios, sistemasOperativos, assets, onUpdate, showToast, onLock, isMobile }) {
   const [section, setSection] = useState(null);
   const [showUForm, setShowUForm] = useState(false);
   const [editingU, setEditingU] = useState(null);
@@ -1601,6 +1641,7 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   const [addErr, setAddErr] = useState("");
   const [editingFamily,  setEditingFamily]  = useState(null);
   const [familySections, setFamilySections] = useState([]);
+  const [soDeleteBlock,  setSoDeleteBlock]  = useState(null);
   // Security
   const [pinEnabled,    setPinEnabled]    = useState(() => localStorage.getItem(PIN_ENABLED_KEY) !== "false");
   const [showChangePIN, setShowChangePIN] = useState(false);
@@ -1662,7 +1703,7 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
     return next;
   });
 
-  const currentList = section==="families" ? families : section==="localizacoes" ? localizacoes : section==="marcas" ? marcas : section==="tarifarios" ? tarifarios : [];
+  const currentList = section==="families" ? families : section==="localizacoes" ? localizacoes : section==="marcas" ? marcas : section==="tarifarios" ? tarifarios : section==="sistemas_operativos" ? sistemasOperativos : [];
   const nameKey = section==="families" ? "name" : "nome";
 
   const addItem = async () => {
@@ -1677,12 +1718,24 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
         const res = await api.addMarca(newVal.trim()); onUpdate("marcas",[...marcas,res[0]]);
       } else if (section==="tarifarios") {
         const res = await api.addTarifario(newVal.trim()); onUpdate("tarifarios",[...tarifarios,res[0]]);
+      } else if (section==="sistemas_operativos") {
+        const res = await api.addSistemaOperativo(newVal.trim()); onUpdate("sistemas_operativos",[...sistemasOperativos,res[0]].sort((a,b)=>a.nome.localeCompare(b.nome)));
       }
       setNewVal(""); setAddErr(""); showToast("Adicionado.");
     } catch { showToast("Erro ao adicionar","error"); }
   };
 
   const removeItem = async (item) => {
+    if (section==="sistemas_operativos") {
+      try {
+        const assocs = await api.getAssetsWithSO(item.nome);
+        if (assocs && assocs.length) { setSoDeleteBlock({ item, assets: assocs }); return; }
+        await api.deleteSistemaOperativo(item.id);
+        onUpdate("sistemas_operativos", sistemasOperativos.filter(s=>s.id!==item.id));
+        showToast("Removido.");
+      } catch { showToast("Erro","error"); }
+      return;
+    }
     try {
       if (section==="families") { await api.deleteFamily(item.id); onUpdate("families",families.filter(f=>f.id!==item.id)); }
       else if (section==="localizacoes") { await api.deleteLocalizacao(item.id); onUpdate("localizacoes",localizacoes.filter(l=>l.id!==item.id)); }
@@ -1742,11 +1795,12 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   };
 
   const MENU = [
-    { id:"families",     label:"Famílias",        count:families.length,     sub:null },
-    { id:"localizacoes", label:"Localizações",     count:localizacoes.length, sub:null },
-    { id:"marcas",       label:"Marcas",           count:marcas.length,       sub:null },
-    { id:"tarifarios",   label:"Tarifários",       count:tarifarios.length,   sub:null },
-    { id:"utilizadores", label:"Utilizadores",     count:utilizadores.length, sub:null },
+    { id:"families",            label:"Famílias",           count:families.length,            sub:null },
+    { id:"localizacoes",        label:"Localizações",        count:localizacoes.length,        sub:null },
+    { id:"marcas",              label:"Marcas",              count:marcas.length,              sub:null },
+    { id:"tarifarios",          label:"Tarifários",          count:tarifarios.length,          sub:null },
+    { id:"sistemas_operativos", label:"Sistemas Operativos", count:sistemasOperativos.length,  sub:null },
+    { id:"utilizadores",        label:"Utilizadores",        count:utilizadores.length,        sub:null },
     { id:"colunas",      label:"Colunas da Lista", count:null,                sub:"Configurar colunas visíveis" },
     { id:"seguranca",    label:"Segurança",        count:null,                sub:"PIN e acesso" },
   ];
@@ -2016,6 +2070,30 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
             {currentList.length===0 && (
               <p style={{ textAlign:"center", color:C.textD, fontSize:13, padding:"32px 0" }}>Nenhum registo.</p>
             )}
+            {soDeleteBlock && (
+              <Modal onClose={()=>setSoDeleteBlock(null)} title="Não é possível remover" isMobile={isMobile}>
+                <div style={{ padding:"20px 24px 24px" }}>
+                  <p style={{ fontSize:13, color:C.textS, lineHeight:1.7, marginBottom:14 }}>
+                    O sistema operativo <strong style={{ color:C.yellow }}>"{soDeleteBlock.item.nome}"</strong> está associado {soDeleteBlock.assets.length===1?"ao seguinte ativo":"aos seguintes ativos"}:
+                  </p>
+                  <div style={{ background:C.surf2, borderRadius:8, border:`1px solid ${C.border}`, overflow:"hidden", marginBottom:20 }}>
+                    {soDeleteBlock.assets.map((a,i) => (
+                      <div key={a.id} style={{ padding:"10px 14px", fontSize:13, color:C.text, fontWeight:500,
+                        borderBottom:i<soDeleteBlock.assets.length-1?`1px solid ${C.border}`:"none" }}>
+                        {a.name}
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize:12, color:C.textD, marginBottom:18, lineHeight:1.6 }}>
+                    Para eliminar este S.O., primeiro remove-o dos ativos acima.
+                  </p>
+                  <button onClick={()=>setSoDeleteBlock(null)} style={{ width:"100%", padding:"11px", borderRadius:10,
+                    border:"none", background:C.yellow, color:C.bg, cursor:"pointer", fontSize:14, fontWeight:700 }}>
+                    Entendido
+                  </button>
+                </div>
+              </Modal>
+            )}
             {editingFamily && (
               <Modal onClose={()=>setEditingFamily(null)} title={`Secções · ${editingFamily.name}`} isMobile={isMobile}>
                 <div style={{ padding:"16px 20px 24px" }}>
@@ -2181,8 +2259,9 @@ export default function App() {
   const [families,     setFamilies]     = useState([]);
   const [localizacoes, setLocalizacoes] = useState([]);
   const [utilizadores, setUtilizadores] = useState([]);
-  const [marcas,       setMarcas]       = useState([]);
-  const [tarifarios,   setTarifarios]   = useState([]);
+  const [marcas,              setMarcas]              = useState([]);
+  const [tarifarios,          setTarifarios]          = useState([]);
+  const [sistemasOperativos,  setSistemasOperativos]  = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [tab,          setTab]          = useState("assets");
   const [toast,        setToast]        = useState(null);
@@ -2200,8 +2279,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    Promise.all([api.getAssets(), api.getFamilies(), api.getLocalizacoes(), api.getUtilizadores(), api.getMarcas(), api.getTarifarios()])
-      .then(([a,f,l,u,m,t]) => { setAssets(a||[]); setFamilies(f||[]); setLocalizacoes(l||[]); setUtilizadores(u||[]); setMarcas(m||[]); setTarifarios(t||[]); })
+    Promise.all([api.getAssets(), api.getFamilies(), api.getLocalizacoes(), api.getUtilizadores(), api.getMarcas(), api.getTarifarios(), api.getSistemasOperativos()])
+      .then(([a,f,l,u,m,t,so]) => { setAssets(a||[]); setFamilies(f||[]); setLocalizacoes(l||[]); setUtilizadores(u||[]); setMarcas(m||[]); setTarifarios(t||[]); setSistemasOperativos(so||[]); })
       .catch(err => showToast("Erro ao carregar: "+(err.message||""),"error"))
       .finally(() => setLoading(false));
   }, []);
@@ -2223,10 +2302,12 @@ export default function App() {
     else if (type==="utilizadores") setUtilizadores(updated);
     else if (type==="marcas") setMarcas(updated);
     else if (type==="tarifarios") setTarifarios(updated);
+    else if (type==="sistemas_operativos") setSistemasOperativos(updated);
   };
 
   const handleAddMarca     = item => setMarcas(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
   const handleAddTarifario = item => setTarifarios(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
+  const handleAddSO        = item => setSistemasOperativos(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
 
   if (!pinOk) return <PinScreen onUnlock={()=>setPinOk(true)}/>;
 
@@ -2240,7 +2321,8 @@ export default function App() {
           <AssetsPage
             assets={assets} families={families} localizacoes={localizacoes}
             utilizadores={utilizadores} marcas={marcas} tarifarios={tarifarios}
-            onAddMarca={handleAddMarca} onAddTarifario={handleAddTarifario}
+            sistemasOperativos={sistemasOperativos}
+            onAddMarca={handleAddMarca} onAddTarifario={handleAddTarifario} onAddSO={handleAddSO}
             loading={loading} isMobile={isMobile}
             onSaveAsset={handleSaveAsset} onDeleteAsset={handleDeleteAsset}
             showToast={showToast}/>
@@ -2248,7 +2330,8 @@ export default function App() {
         {tab==="settings" && (
           <SettingsPage
             families={families} localizacoes={localizacoes} utilizadores={utilizadores}
-            marcas={marcas} tarifarios={tarifarios}
+            marcas={marcas} tarifarios={tarifarios} sistemasOperativos={sistemasOperativos}
+            assets={assets}
             onUpdate={handleSettingsUpdate} showToast={showToast}
             onLock={handleLock} isMobile={isMobile}/>
         )}
