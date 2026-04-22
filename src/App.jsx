@@ -527,7 +527,7 @@ function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas
     ? (assets||[]).filter(a => {
         const fam = families.find(f => f.id === a.family_id);
         return fam?.name?.toLowerCase() === "servidor" && a.servidor_tipo === "fisico" && a.id !== asset?.id;
-      })
+      }).sort((a,b) => a.name.localeCompare(b.name))
     : [];
 
   const padding = isMobile ? "16px 20px 24px" : "20px 24px 24px";
