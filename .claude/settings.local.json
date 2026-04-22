@@ -6,7 +6,13 @@
       "Bash(node -e ' *)",
       "Bash(git stash *)",
       "Bash(git fetch *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "mcp__plugin_supabase_supabase__apply_migration",
+      "Bash(npx --yes vite build --mode development)",
+      "Bash(npx vite *)",
+      "Bash(node_modules/.bin/react-scripts build *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
