@@ -73,6 +73,7 @@ const F  = "'Outfit', system-ui, sans-serif";
 const FM = "'Outfit', monospace";
 
 const SECTIONS = [
+  { id:"credenciais",      label:"Credenciais" },
   { id:"localizacao",      label:"Localização" },
   { id:"computador",       label:"Computador" },
   { id:"software",         label:"Software" },
@@ -136,6 +137,9 @@ const PATHS = {
   grid:     "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   check:    "M20 6L9 17l-5-5",
   list:     "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+  copy:     "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z",
+  eye:      "M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7M12 15a3 3 0 100-6 3 3 0 000 6",
+  eyeOff:   "M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22",
 };
 
 const Ico = ({ n, s=20, c="currentColor", w=1.8 }) => (
@@ -151,6 +155,7 @@ const EMPTY_FORM = {
   ms365:null, localizacao:"",
   monitor_marca:"", monitor_modelo:"", monitor_polegadas:"", monitor_quantidade:"",
   dominio:"", grupo_trabalho:"", observacoes:"", utilizador_id:"",
+  credentials:[],
   // Smartphone
   telefone_numero:"",
   equip_marca:"", equip_modelo:"", equip_serial:"", equip_imei1:"", equip_imei2:"",
@@ -397,7 +402,7 @@ function Modal({ onClose, children, title, action, isMobile }) {
 
 // ─── ASSET FORM ───────────────────────────────────────────────────────────────
 function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifarios, onAddMarca, onAddTarifario, onSave, onClose, showToast, isMobile }) {
-  const [form,           setForm]           = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset});
+  const [form,           setForm]           = useState({...EMPTY_FORM, family_id:families[0]?.id||"", ...asset, credentials:asset?.credentials||[]});
   const [preview,        setPreview]        = useState(asset?.photo_url||null);
   const [uploading,      setUploading]      = useState(false);
   const [saving,         setSaving]         = useState(false);
@@ -406,8 +411,24 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
   const [newMarcaVal,    setNewMarcaVal]    = useState("");
   const [newTarifMode,   setNewTarifMode]   = useState(false);
   const [newTarifVal,    setNewTarifVal]    = useState("");
+  const [showPwds,       setShowPwds]       = useState(new Set());
+  const [copiedFormCred, setCopiedFormCred] = useState(null);
+  const copyFormTimers = useRef({});
   const fileRef = useRef();
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const addCred    = () => setForm(f=>({...f, credentials:[...(f.credentials||[]), {label:"",username:"",password:""}]}));
+  const removeCred = idx => setForm(f=>({...f, credentials:(f.credentials||[]).filter((_,i)=>i!==idx)}));
+  const setCred    = (idx,k,v) => setForm(f=>({...f, credentials:(f.credentials||[]).map((c,i)=>i===idx?{...c,[k]:v}:c)}));
+  const toggleShowPwd = idx => setShowPwds(p=>{ const n=new Set(p); n.has(idx)?n.delete(idx):n.add(idx); return n; });
+  const copyCredPwd = (idx, pwd) => {
+    navigator.clipboard.writeText(pwd).catch(()=>{});
+    setCopiedFormCred(idx);
+    clearTimeout(copyFormTimers.current[idx]);
+    copyFormTimers.current[idx] = setTimeout(()=>{
+      navigator.clipboard.writeText("").catch(()=>{});
+      setCopiedFormCred(c=>c===idx?null:c);
+    }, 10000);
+  };
 
   const saveMarca = async () => {
     if (!newMarcaVal.trim()) return;
@@ -461,6 +482,7 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
         tarif_nome:form.tarif_nome||null, tarif_cartao:form.tarif_cartao||null,
         tarif_pin:form.tarif_pin||null, tarif_puk:form.tarif_puk||null,
         tarif_plafond:form.tarif_plafond||null,
+        credentials:(()=>{ const c=(form.credentials||[]).filter(c=>c.username||c.password); return c.length?c:null; })(),
       };
       const res = asset?.id ? await api.updateAsset(asset.id, p) : await api.addAsset(p);
       onSave(res[0]);
@@ -523,199 +545,276 @@ function AssetForm({ asset, families, localizacoes, utilizadores, marcas, tarifa
         </div>
       </div>
 
-      {showSec("computador") && <>
-      <SH label="Computador"/>
-      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
-        {[
-          { k:"modelo",  l:"Modelo",            full:true,  ph:"Ex: HP EliteBook 840 G9" },
-          { k:"serial",  l:"Número de Série",   full:true,  ph:"Ex: 5CG24818B4" },
-          { k:"cpu",     l:"CPU",               full:false, ph:"Ex: Intel Core i7-1255U" },
-          { k:"memoria", l:"Memória RAM",        full:false, ph:"Ex: 16GB DDR5" },
-          { k:"hdd",     l:"HDD / SSD",          full:false, ph:"Ex: 512GB NVMe" },
-          { k:"gpu",     l:"GPU",               full:false, ph:"Ex: Intel Iris Xe" },
-          { k:"so",      l:"Sistema Operativo", full:true,  ph:"Ex: Windows 11 Pro" },
-        ].map(f=>(
-          <div key={f.k} style={ (!isMobile && f.full) ? {gridColumn:"1/-1"} : {} }>
-            <label style={LS}>{f.l}</label>
-            <input {...iP(f.k)} placeholder={f.ph}/>
-          </div>
-        ))}
-      </div>
-      </>}
-
-      {showSec("software") && <>
-      <SH label="Software"/>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"12px 14px", background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
-        <span style={{ fontSize:14, color:C.textS }}>Microsoft 365</span>
-        <div style={{ display:"flex", borderRadius:6, overflow:"hidden", border:`1px solid ${C.border2}` }}>
-          {[["true","Sim",C.green,C.greenL],["false","Não",C.red,C.redL],["null","N/D",C.textD,C.surf3]].map(([val,label,col,bg])=>{
-            const active = String(form.ms365)===val;
-            return (
-              <button key={val} onClick={()=>set("ms365",val==="true"?true:val==="false"?false:null)}
-                style={{ padding:"6px 14px", border:"none", cursor:"pointer", fontSize:12, fontWeight:600,
-                  letterSpacing:"0.04em", transition:"all .15s",
-                  background:active?bg:C.surf2, color:active?col:C.textD }}>
-                {label}
+      {/* Sections rendered in family-defined order */}
+      {(() => {
+        const sectionContent = {
+          credenciais: (
+            <>
+              <SH label="Credenciais"/>
+              {(form.credentials||[]).map((cred, idx) => (
+                <div key={idx} style={{ background:C.surf2, borderRadius:8, border:`1px solid ${C.border}`, padding:"12px", marginBottom:8 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:8, marginBottom:8 }}>
+                    <div>
+                      <label style={LS}>Etiqueta</label>
+                      <input value={cred.label||""} onChange={e=>setCred(idx,"label",e.target.value)}
+                        placeholder="Ex: Admin" style={IS()}
+                        onFocus={e=>e.target.style.borderColor=C.yellow}
+                        onBlur={e=>e.target.style.borderColor=C.border2}/>
+                    </div>
+                    <div>
+                      <label style={LS}>Username</label>
+                      <input value={cred.username||""} onChange={e=>setCred(idx,"username",e.target.value)}
+                        placeholder="Ex: admin@empresa.pt" style={IS()}
+                        onFocus={e=>e.target.style.borderColor=C.yellow}
+                        onBlur={e=>e.target.style.borderColor=C.border2}/>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
+                    <div style={{ flex:1 }}>
+                      <label style={LS}>Password</label>
+                      <div style={{ position:"relative" }}>
+                        <input type={showPwds.has(idx)?"text":"password"} value={cred.password||""}
+                          onChange={e=>setCred(idx,"password",e.target.value)}
+                          placeholder="••••••••" style={{ ...IS(), paddingRight:76 }}
+                          onFocus={e=>e.target.style.borderColor=C.yellow}
+                          onBlur={e=>e.target.style.borderColor=C.border2}/>
+                        <div style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", display:"flex", gap:2 }}>
+                          <button type="button" onClick={()=>toggleShowPwd(idx)}
+                            style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 5px", borderRadius:4, display:"flex", alignItems:"center" }}>
+                            <Ico n={showPwds.has(idx)?"eyeOff":"eye"} s={14} c={C.textD}/>
+                          </button>
+                          <button type="button" onClick={()=>copyCredPwd(idx, cred.password||"")}
+                            title="Copiar password (limpa clipboard em 10s)"
+                            style={{ background:"none", border:"none", cursor:"pointer", padding:"4px 5px", borderRadius:4, display:"flex", alignItems:"center" }}>
+                            <Ico n="copy" s={14} c={copiedFormCred===idx?C.green:C.textD}/>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" onClick={()=>removeCred(idx)}
+                      style={{ padding:"0 10px", height:38, borderRadius:8, border:"none", flexShrink:0,
+                        background:C.redL, color:C.red, cursor:"pointer", display:"flex", alignItems:"center" }}>
+                      <Ico n="x" s={14} c={C.red}/>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addCred}
+                style={{ width:"100%", padding:"9px", borderRadius:8, border:`1.5px dashed ${C.border2}`,
+                  background:"transparent", color:C.textD, cursor:"pointer", fontSize:13, fontWeight:600,
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                <Ico n="plus" s={14} c={C.textD}/> Adicionar credencial
               </button>
-            );
-          })}
-        </div>
-      </div>
-      </>}
-
-      {showSec("localizacao") && <>
-      <SH label="Localização"/>
-      <select value={form.localizacao||""} onChange={e=>set("localizacao",e.target.value)}
-        style={{ ...IS(), cursor:"pointer" }}>
-        <option value="">— Selecionar —</option>
-        {localizacoes.map(l=><option key={l.id} value={l.nome}>{l.nome}</option>)}
-      </select>
-      </>}
-
-      {showSec("monitor") && <>
-      <SH label="Monitor"/>
-      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
-        {[
-          { k:"monitor_marca",     l:"Marca",     ph:"Ex: LG" },
-          { k:"monitor_modelo",    l:"Modelo",    ph:"Ex: 27UK850" },
-          { k:"monitor_polegadas", l:"Polegadas", ph:"27\"" },
-          { k:"monitor_quantidade",l:"Qtd.",      ph:"1" },
-        ].map(f=>(
-          <div key={f.k}>
-            <label style={LS}>{f.l}</label>
-            <input {...iP(f.k)} placeholder={f.ph}/>
-          </div>
-        ))}
-      </div>
-      </>}
-
-      {showSec("rede") && <>
-      <SH label="Rede"/>
-      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
-        {[
-          { k:"dominio",        l:"Domínio",           ph:"empresa.local" },
-          { k:"grupo_trabalho", l:"Grupo de Trabalho", ph:"WORKGROUP" },
-        ].map(f=>(
-          <div key={f.k}>
-            <label style={LS}>{f.l}</label>
-            <input {...iP(f.k)} placeholder={f.ph}/>
-          </div>
-        ))}
-      </div>
-      </>}
-
-      {showSec("dados_principais") && <>
-      <SH label="Dados Principais"/>
-      <div>
-        <label style={LS}>Número</label>
-        <input {...iP("telefone_numero")} placeholder="Ex: +351 912 345 678"/>
-      </div>
-      </>}
-
-      {showSec("equipamento") && <>
-      <SH label="Equipamento"/>
-      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
-        <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
-          <label style={LS}>Marca</label>
-          {newMarcaMode ? (
-            <div style={{ display:"flex", gap:8 }}>
-              <input value={newMarcaVal} onChange={e=>setNewMarcaVal(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&saveMarca()}
-                placeholder="Nome da marca..." autoFocus
-                style={{ ...IS(), flex:1 }}
+            </>
+          ),
+          computador: (
+            <>
+              <SH label="Computador"/>
+              <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+                {[
+                  { k:"modelo",  l:"Modelo",            full:true,  ph:"Ex: HP EliteBook 840 G9" },
+                  { k:"serial",  l:"Número de Série",   full:true,  ph:"Ex: 5CG24818B4" },
+                  { k:"cpu",     l:"CPU",               full:false, ph:"Ex: Intel Core i7-1255U" },
+                  { k:"memoria", l:"Memória RAM",       full:false, ph:"Ex: 16GB DDR5" },
+                  { k:"hdd",     l:"HDD / SSD",         full:false, ph:"Ex: 512GB NVMe" },
+                  { k:"gpu",     l:"GPU",               full:false, ph:"Ex: Intel Iris Xe" },
+                  { k:"so",      l:"Sistema Operativo", full:true,  ph:"Ex: Windows 11 Pro" },
+                ].map(f=>(
+                  <div key={f.k} style={ (!isMobile && f.full) ? {gridColumn:"1/-1"} : {} }>
+                    <label style={LS}>{f.l}</label>
+                    <input {...iP(f.k)} placeholder={f.ph}/>
+                  </div>
+                ))}
+              </div>
+            </>
+          ),
+          software: (
+            <>
+              <SH label="Software"/>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"12px 14px", background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
+                <span style={{ fontSize:14, color:C.textS }}>Microsoft 365</span>
+                <div style={{ display:"flex", borderRadius:6, overflow:"hidden", border:`1px solid ${C.border2}` }}>
+                  {[["true","Sim",C.green,C.greenL],["false","Não",C.red,C.redL],["null","N/D",C.textD,C.surf3]].map(([val,label,col,bg])=>{
+                    const active = String(form.ms365)===val;
+                    return (
+                      <button key={val} onClick={()=>set("ms365",val==="true"?true:val==="false"?false:null)}
+                        style={{ padding:"6px 14px", border:"none", cursor:"pointer", fontSize:12, fontWeight:600,
+                          letterSpacing:"0.04em", transition:"all .15s",
+                          background:active?bg:C.surf2, color:active?col:C.textD }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ),
+          localizacao: (
+            <>
+              <SH label="Localização"/>
+              <select value={form.localizacao||""} onChange={e=>set("localizacao",e.target.value)}
+                style={{ ...IS(), cursor:"pointer" }}>
+                <option value="">— Selecionar —</option>
+                {localizacoes.map(l=><option key={l.id} value={l.nome}>{l.nome}</option>)}
+              </select>
+            </>
+          ),
+          monitor: (
+            <>
+              <SH label="Monitor"/>
+              <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+                {[
+                  { k:"monitor_marca",      l:"Marca",     ph:"Ex: LG" },
+                  { k:"monitor_modelo",     l:"Modelo",    ph:"Ex: 27UK850" },
+                  { k:"monitor_polegadas",  l:"Polegadas", ph:"27\"" },
+                  { k:"monitor_quantidade", l:"Qtd.",      ph:"1" },
+                ].map(f=>(
+                  <div key={f.k}>
+                    <label style={LS}>{f.l}</label>
+                    <input {...iP(f.k)} placeholder={f.ph}/>
+                  </div>
+                ))}
+              </div>
+            </>
+          ),
+          rede: (
+            <>
+              <SH label="Rede"/>
+              <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+                {[
+                  { k:"dominio",        l:"Domínio",           ph:"empresa.local" },
+                  { k:"grupo_trabalho", l:"Grupo de Trabalho", ph:"WORKGROUP" },
+                ].map(f=>(
+                  <div key={f.k}>
+                    <label style={LS}>{f.l}</label>
+                    <input {...iP(f.k)} placeholder={f.ph}/>
+                  </div>
+                ))}
+              </div>
+            </>
+          ),
+          dados_principais: (
+            <>
+              <SH label="Dados Principais"/>
+              <div>
+                <label style={LS}>Número</label>
+                <input {...iP("telefone_numero")} placeholder="Ex: +351 912 345 678"/>
+              </div>
+            </>
+          ),
+          equipamento: (
+            <>
+              <SH label="Equipamento"/>
+              <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+                <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
+                  <label style={LS}>Marca</label>
+                  {newMarcaMode ? (
+                    <div style={{ display:"flex", gap:8 }}>
+                      <input value={newMarcaVal} onChange={e=>setNewMarcaVal(e.target.value)}
+                        onKeyDown={e=>e.key==="Enter"&&saveMarca()}
+                        placeholder="Nome da marca..." autoFocus
+                        style={{ ...IS(), flex:1 }}
+                        onFocus={e=>e.target.style.borderColor=C.yellow}
+                        onBlur={e=>e.target.style.borderColor=C.border2}/>
+                      <button onClick={saveMarca} style={{ padding:"0 14px", borderRadius:8, border:"none",
+                        background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
+                      <button onClick={()=>{ setNewMarcaMode(false); setNewMarcaVal(""); }}
+                        style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
+                        background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <select value={form.equip_marca||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewMarcaMode(true); } else { set("equip_marca",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
+                      <option value="">— Selecionar —</option>
+                      {marcas.map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
+                      <option value="__new__">＋ Criar nova marca...</option>
+                    </select>
+                  )}
+                </div>
+                {[
+                  { k:"equip_modelo",  l:"Modelo",           ph:"Ex: iPhone 15 Pro" },
+                  { k:"equip_serial",  l:"Número de Série",  ph:"Ex: F2LXX1234567" },
+                  { k:"equip_imei1",   l:"IMEI 1",           ph:"Ex: 351234567890123" },
+                  { k:"equip_imei2",   l:"IMEI 2",           ph:"Ex: 351234567890124" },
+                ].map(f=>(
+                  <div key={f.k}>
+                    <label style={LS}>{f.l}</label>
+                    <input {...iP(f.k)} placeholder={f.ph}/>
+                  </div>
+                ))}
+                <div>
+                  <label style={LS}>Data de Compra</label>
+                  <input type="date" value={form.equip_data_compra||""} onChange={e=>set("equip_data_compra",e.target.value)}
+                    style={{ ...IS(), cursor:"pointer", colorScheme:"dark" }}
+                    onFocus={e=>e.target.style.borderColor=C.yellow}
+                    onBlur={e=>e.target.style.borderColor=C.border2}/>
+                </div>
+                <div>
+                  <label style={LS}>Data de Entrega</label>
+                  <input type="date" value={form.equip_data_entrega||""} onChange={e=>set("equip_data_entrega",e.target.value)}
+                    style={{ ...IS(), cursor:"pointer", colorScheme:"dark" }}
+                    onFocus={e=>e.target.style.borderColor=C.yellow}
+                    onBlur={e=>e.target.style.borderColor=C.border2}/>
+                </div>
+              </div>
+            </>
+          ),
+          tarifario: (
+            <>
+              <SH label="Tarifário"/>
+              <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
+                <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
+                  <label style={LS}>Tarifário</label>
+                  {newTarifMode ? (
+                    <div style={{ display:"flex", gap:8 }}>
+                      <input value={newTarifVal} onChange={e=>setNewTarifVal(e.target.value)}
+                        onKeyDown={e=>e.key==="Enter"&&saveTarif()}
+                        placeholder="Nome do tarifário..." autoFocus
+                        style={{ ...IS(), flex:1 }}
+                        onFocus={e=>e.target.style.borderColor=C.yellow}
+                        onBlur={e=>e.target.style.borderColor=C.border2}/>
+                      <button onClick={saveTarif} style={{ padding:"0 14px", borderRadius:8, border:"none",
+                        background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
+                      <button onClick={()=>{ setNewTarifMode(false); setNewTarifVal(""); }}
+                        style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
+                        background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <select value={form.tarif_nome||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewTarifMode(true); } else { set("tarif_nome",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
+                      <option value="">— Selecionar —</option>
+                      {tarifarios.map(t=><option key={t.id} value={t.nome}>{t.nome}</option>)}
+                      <option value="__new__">＋ Criar novo tarifário...</option>
+                    </select>
+                  )}
+                </div>
+                {[
+                  { k:"tarif_cartao",  l:"Nº Cartão",        ph:"Ex: 89351000012345678" },
+                  { k:"tarif_pin",     l:"PIN original",     ph:"••••" },
+                  { k:"tarif_puk",     l:"PUK",              ph:"Ex: 12345678" },
+                  { k:"tarif_plafond", l:"Plafond de Dados", ph:"Ex: 20GB" },
+                ].map(f=>(
+                  <div key={f.k}>
+                    <label style={LS}>{f.l}</label>
+                    <input {...iP(f.k)} placeholder={f.ph}/>
+                  </div>
+                ))}
+              </div>
+            </>
+          ),
+          observacoes: (
+            <>
+              <SH label="Observações"/>
+              <textarea value={form.observacoes||""} onChange={e=>set("observacoes",e.target.value)} rows={3}
+                placeholder="Notas adicionais..." style={{ ...IS(), resize:"vertical", lineHeight:1.6 }}
                 onFocus={e=>e.target.style.borderColor=C.yellow}
                 onBlur={e=>e.target.style.borderColor=C.border2}/>
-              <button onClick={saveMarca} style={{ padding:"0 14px", borderRadius:8, border:"none",
-                background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
-              <button onClick={()=>{ setNewMarcaMode(false); setNewMarcaVal(""); }}
-                style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
-                background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
-            </div>
-          ) : (
-            <select value={form.equip_marca||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewMarcaMode(true); } else { set("equip_marca",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
-              <option value="">— Selecionar —</option>
-              {marcas.map(m=><option key={m.id} value={m.nome}>{m.nome}</option>)}
-              <option value="__new__">＋ Criar nova marca...</option>
-            </select>
-          )}
-        </div>
-        {[
-          { k:"equip_modelo",  l:"Modelo",           ph:"Ex: iPhone 15 Pro" },
-          { k:"equip_serial",  l:"Número de Série",  ph:"Ex: F2LXX1234567" },
-          { k:"equip_imei1",   l:"IMEI 1",           ph:"Ex: 351234567890123" },
-          { k:"equip_imei2",   l:"IMEI 2",           ph:"Ex: 351234567890124" },
-        ].map(f=>(
-          <div key={f.k}>
-            <label style={LS}>{f.l}</label>
-            <input {...iP(f.k)} placeholder={f.ph}/>
-          </div>
-        ))}
-        <div>
-          <label style={LS}>Data de Compra</label>
-          <input type="date" value={form.equip_data_compra||""} onChange={e=>set("equip_data_compra",e.target.value)}
-            style={{ ...IS(), cursor:"pointer", colorScheme:"dark" }}
-            onFocus={e=>e.target.style.borderColor=C.yellow}
-            onBlur={e=>e.target.style.borderColor=C.border2}/>
-        </div>
-        <div>
-          <label style={LS}>Data de Entrega</label>
-          <input type="date" value={form.equip_data_entrega||""} onChange={e=>set("equip_data_entrega",e.target.value)}
-            style={{ ...IS(), cursor:"pointer", colorScheme:"dark" }}
-            onFocus={e=>e.target.style.borderColor=C.yellow}
-            onBlur={e=>e.target.style.borderColor=C.border2}/>
-        </div>
-      </div>
-      </>}
-
-      {showSec("tarifario") && <>
-      <SH label="Tarifário"/>
-      <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
-        <div style={ !isMobile ? {gridColumn:"1/-1"} : {} }>
-          <label style={LS}>Tarifário</label>
-          {newTarifMode ? (
-            <div style={{ display:"flex", gap:8 }}>
-              <input value={newTarifVal} onChange={e=>setNewTarifVal(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&saveTarif()}
-                placeholder="Nome do tarifário..." autoFocus
-                style={{ ...IS(), flex:1 }}
-                onFocus={e=>e.target.style.borderColor=C.yellow}
-                onBlur={e=>e.target.style.borderColor=C.border2}/>
-              <button onClick={saveTarif} style={{ padding:"0 14px", borderRadius:8, border:"none",
-                background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Criar</button>
-              <button onClick={()=>{ setNewTarifMode(false); setNewTarifVal(""); }}
-                style={{ padding:"0 10px", borderRadius:8, border:`1px solid ${C.border2}`,
-                background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
-            </div>
-          ) : (
-            <select value={form.tarif_nome||""} onChange={e=>{ if(e.target.value==="__new__"){ setNewTarifMode(true); } else { set("tarif_nome",e.target.value); }}} style={{ ...IS(), cursor:"pointer" }}>
-              <option value="">— Selecionar —</option>
-              {tarifarios.map(t=><option key={t.id} value={t.nome}>{t.nome}</option>)}
-              <option value="__new__">＋ Criar novo tarifário...</option>
-            </select>
-          )}
-        </div>
-        {[
-          { k:"tarif_cartao",  l:"Nº Cartão",       ph:"Ex: 89351000012345678" },
-          { k:"tarif_pin",     l:"PIN original",    ph:"••••" },
-          { k:"tarif_puk",     l:"PUK",             ph:"Ex: 12345678" },
-          { k:"tarif_plafond", l:"Plafond de Dados", ph:"Ex: 20GB" },
-        ].map(f=>(
-          <div key={f.k}>
-            <label style={LS}>{f.l}</label>
-            <input {...iP(f.k)} placeholder={f.ph}/>
-          </div>
-        ))}
-      </div>
-      </>}
-
-      {showSec("observacoes") && <>
-      <SH label="Observações"/>
-      <textarea value={form.observacoes||""} onChange={e=>set("observacoes",e.target.value)} rows={3}
-        placeholder="Notas adicionais..." style={{ ...IS(), resize:"vertical", lineHeight:1.6 }}
-        onFocus={e=>e.target.style.borderColor=C.yellow}
-        onBlur={e=>e.target.style.borderColor=C.border2}/>
-      </>}
+            </>
+          ),
+        };
+        return allowedSecs.map(id =>
+          sectionContent[id] ? <React.Fragment key={id}>{sectionContent[id]}</React.Fragment> : null
+        );
+      })()}
 
       <div style={{ display:"flex", gap:10, marginTop:20 }}>
         <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10,
@@ -756,6 +855,19 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
   const allowedSecs = family?.sections ?? SECTIONS.map(s=>s.id);
   const showSec = id => allowedSecs.includes(id);
 
+  const [copiedCredIdx, setCopiedCredIdx] = useState(null);
+  const credCopyTimer = useRef(null);
+  useEffect(() => () => clearTimeout(credCopyTimer.current), []);
+  const copyCredDetail = (idx, pwd) => {
+    navigator.clipboard.writeText(pwd).catch(()=>{});
+    setCopiedCredIdx(idx);
+    clearTimeout(credCopyTimer.current);
+    credCopyTimer.current = setTimeout(()=>{
+      navigator.clipboard.writeText("").catch(()=>{});
+      setCopiedCredIdx(null);
+    }, 10000);
+  };
+
   const Row = ({ label, value, mono }) => !value ? null : (
     <div style={{ display:"flex", gap:12, padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
       <span style={{ fontSize:11, fontWeight:600, color:C.textD, textTransform:"uppercase",
@@ -766,16 +878,16 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
 
   const fmtDate = v => { if (!v) return null; const [y,m,d]=v.split("-"); return `${d}/${m}/${y}`; };
 
-  const sections = [
-    { id:"localizacao",      title:"Localização",      rows:[["Localização",asset.localizacao]] },
-    { id:"computador",       title:"Computador",       rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
-    { id:"software",         title:"Software",         rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
-    { id:"monitor",          title:"Monitor",          rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
-    { id:"rede",             title:"Rede",             rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
-    { id:"dados_principais", title:"Dados Principais", rows:[["Número",asset.telefone_numero]] },
-    { id:"equipamento",      title:"Equipamento",      rows:[["Marca",asset.equip_marca],["Modelo",asset.equip_modelo],["Nº Série",asset.equip_serial,true],["IMEI 1",asset.equip_imei1,true],["IMEI 2",asset.equip_imei2,true],["Data Compra",fmtDate(asset.equip_data_compra)],["Data Entrega",fmtDate(asset.equip_data_entrega)]] },
-    { id:"tarifario",        title:"Tarifário",        rows:[["Tarifário",asset.tarif_nome],["Nº Cartão",asset.tarif_cartao,true],["PIN original",asset.tarif_pin,true],["PUK",asset.tarif_puk,true],["Plafond Dados",asset.tarif_plafond]] },
-  ].filter(s => showSec(s.id));
+  const sectionDefs = {
+    localizacao:      { title:"Localização",      rows:[["Localização",asset.localizacao]] },
+    computador:       { title:"Computador",       rows:[["Modelo",asset.modelo],["Nº Série",asset.serial,true],["CPU",asset.cpu],["RAM",asset.memoria],["HDD / SSD",asset.hdd],["GPU",asset.gpu],["S.O.",asset.so]] },
+    software:         { title:"Software",         rows:[["Microsoft 365",asset.ms365===true?"Sim":asset.ms365===false?"Não":null]] },
+    monitor:          { title:"Monitor",          rows:[["Marca",asset.monitor_marca],["Modelo",asset.monitor_modelo],["Polegadas",asset.monitor_polegadas],["Qtd.",asset.monitor_quantidade]] },
+    rede:             { title:"Rede",             rows:[["Domínio",asset.dominio],["Grupo de Trabalho",asset.grupo_trabalho]] },
+    dados_principais: { title:"Dados Principais", rows:[["Número",asset.telefone_numero]] },
+    equipamento:      { title:"Equipamento",      rows:[["Marca",asset.equip_marca],["Modelo",asset.equip_modelo],["Nº Série",asset.equip_serial,true],["IMEI 1",asset.equip_imei1,true],["IMEI 2",asset.equip_imei2,true],["Data Compra",fmtDate(asset.equip_data_compra)],["Data Entrega",fmtDate(asset.equip_data_entrega)]] },
+    tarifario:        { title:"Tarifário",        rows:[["Tarifário",asset.tarif_nome],["Nº Cartão",asset.tarif_cartao,true],["PIN original",asset.tarif_pin,true],["PUK",asset.tarif_puk,true],["Plafond Dados",asset.tarif_plafond]] },
+  };
 
   const content = (
     <>
@@ -816,28 +928,72 @@ function AssetDetail({ asset, families, utilizadores, onEdit, onDelete, onClose,
         ) : <span style={{ fontSize:13, color:C.textD, fontStyle:"italic" }}>Não atribuído</span>}
       </div>
 
-      {/* Secções */}
+      {/* Secções em ordem definida pela família */}
       <div style={{ padding:"4px 20px 20px" }}>
-        {sections.map(sec => {
-          const hasData = sec.rows.some(([,v])=>v!=null&&v!==false&&v!=="");
+        {allowedSecs.map(id => {
+          if (id === "credenciais") {
+            const creds = asset.credentials || [];
+            if (!creds.length) return null;
+            return (
+              <div key={id}>
+                <SH label="Credenciais"/>
+                {creds.map((cred, idx) => (
+                  <div key={idx} style={{ background:C.surf2, borderRadius:8, border:`1px solid ${C.border}`, padding:"12px 14px", marginBottom:8 }}>
+                    {cred.label && (
+                      <div style={{ fontSize:10, fontWeight:700, color:C.yellow, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>
+                        {cred.label}
+                      </div>
+                    )}
+                    {cred.username && (
+                      <div style={{ display:"flex", gap:12, padding:"6px 0", borderBottom:`1px solid ${C.border}` }}>
+                        <span style={{ fontSize:11, fontWeight:600, color:C.textD, textTransform:"uppercase", letterSpacing:"0.08em", minWidth:80, flexShrink:0 }}>Username</span>
+                        <span style={{ fontSize:13, color:C.text, fontFamily:FM }}>{cred.username}</span>
+                      </div>
+                    )}
+                    <div style={{ display:"flex", gap:12, padding:"6px 0", alignItems:"center" }}>
+                      <span style={{ fontSize:11, fontWeight:600, color:C.textD, textTransform:"uppercase", letterSpacing:"0.08em", minWidth:80, flexShrink:0 }}>Password</span>
+                      <span style={{ fontSize:16, color:C.textD, flex:1, letterSpacing:"0.15em" }}>{"•".repeat(Math.min((cred.password||"").length||8, 12))}</span>
+                      {cred.password && (
+                        <button onClick={()=>copyCredDetail(idx, cred.password)}
+                          style={{ background:copiedCredIdx===idx?C.greenL:C.surf3,
+                            border:`1px solid ${copiedCredIdx===idx?C.green:C.border2}`,
+                            borderRadius:6, padding:"5px 10px", cursor:"pointer",
+                            color:copiedCredIdx===idx?C.green:C.textS, flexShrink:0,
+                            display:"flex", alignItems:"center", gap:4, fontSize:11, fontWeight:600, transition:"all .2s" }}>
+                          <Ico n="copy" s={12} c={copiedCredIdx===idx?C.green:C.textS}/>
+                          {copiedCredIdx===idx?"Copiado!":"Copiar"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          if (id === "observacoes") {
+            if (!asset.observacoes) return null;
+            return (
+              <div key={id}>
+                <SH label="Observações"/>
+                <p style={{ fontSize:13, color:C.textS, lineHeight:1.8, padding:"10px 13px",
+                  background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
+                  {asset.observacoes}
+                </p>
+              </div>
+            );
+          }
+          const def = sectionDefs[id];
+          if (!def) return null;
+          const hasData = def.rows.some(([,v])=>v!=null&&v!==false&&v!=="");
           if (!hasData) return null;
           return (
-            <div key={sec.title}>
-              <SH label={sec.title}/>
-              {sec.rows.map(([label,value,mono])=> value!=null&&value!==""&&value!==false
+            <div key={id}>
+              <SH label={def.title}/>
+              {def.rows.map(([label,value,mono])=> value!=null&&value!==""&&value!==false
                 ? <Row key={label} label={label} value={String(value)} mono={mono}/> : null)}
             </div>
           );
         })}
-        {showSec("observacoes") && asset.observacoes && (
-          <>
-            <SH label="Observações"/>
-            <p style={{ fontSize:13, color:C.textS, lineHeight:1.8, padding:"10px 13px",
-              background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
-              {asset.observacoes}
-            </p>
-          </>
-        )}
       </div>
 
       {/* Footer */}
@@ -1496,6 +1652,15 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   const toggleSec = id => setFamilySections(prev =>
     prev.includes(id) ? prev.filter(s=>s!==id) : [...prev, id]
   );
+  const moveSec = (id, dir) => setFamilySections(prev => {
+    const idx = prev.indexOf(id);
+    if (idx === -1) return prev;
+    const next = [...prev];
+    const swap = idx + dir;
+    if (swap < 0 || swap >= next.length) return next;
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    return next;
+  });
 
   const currentList = section==="families" ? families : section==="localizacoes" ? localizacoes : section==="marcas" ? marcas : section==="tarifarios" ? tarifarios : [];
   const nameKey = section==="families" ? "name" : "nome";
@@ -1854,25 +2019,55 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
             {editingFamily && (
               <Modal onClose={()=>setEditingFamily(null)} title={`Secções · ${editingFamily.name}`} isMobile={isMobile}>
                 <div style={{ padding:"16px 20px 24px" }}>
-                  <p style={{ fontSize:13, color:C.textS, marginBottom:16 }}>
-                    Seleciona as secções que aparecem nos ativos desta família.
+                  <p style={{ fontSize:13, color:C.textS, marginBottom:4 }}>
+                    Ativa/desativa e ordena as secções desta família. A ordem aqui definida é a ordem de apresentação nos detalhes do ativo.
                   </p>
-                  {SECTIONS.map(s => {
-                    const on = familySections.includes(s.id);
+                  {familySections.length > 0 && (
+                    <p style={{ fontSize:11, color:C.textD, marginBottom:14 }}>Secções ativas — usa ↑ ↓ para reordenar</p>
+                  )}
+                  {/* Enabled sections in order */}
+                  {familySections.map((id, idx) => {
+                    const s = SECTIONS.find(sec=>sec.id===id);
+                    if (!s) return null;
                     return (
-                      <div key={s.id} onClick={()=>toggleSec(s.id)}
-                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-                          padding:"12px 14px", borderRadius:8, marginBottom:8, cursor:"pointer",
-                          border:`1.5px solid ${on?C.yellow:C.border2}`,
-                          background:on?C.yellowL:C.surf2, transition:"all .15s" }}>
-                        <span style={{ fontSize:14, fontWeight:on?600:400, color:on?C.yellow:C.text }}>{s.label}</span>
-                        <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${on?C.yellow:C.border2}`,
-                          background:on?C.yellow:"transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          {on && <span style={{ color:C.bg, fontSize:11, fontWeight:800 }}>✓</span>}
+                      <div key={id} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+                        <div onClick={()=>toggleSec(id)} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"space-between",
+                          padding:"10px 14px", borderRadius:8, cursor:"pointer",
+                          border:`1.5px solid ${C.yellow}`, background:C.yellowL, transition:"all .15s" }}>
+                          <span style={{ fontSize:14, fontWeight:600, color:C.yellow }}>{s.label}</span>
+                          <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${C.yellow}`,
+                            background:C.yellow, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                            <span style={{ color:C.bg, fontSize:11, fontWeight:800 }}>✓</span>
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                          <button onClick={()=>moveSec(id,-1)} disabled={idx===0}
+                            style={{ width:28, height:28, borderRadius:6, border:`1px solid ${C.border2}`,
+                              background:C.surf2, color:idx===0?C.textD:C.yellow, cursor:idx===0?"default":"pointer",
+                              display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700 }}>↑</button>
+                          <button onClick={()=>moveSec(id,1)} disabled={idx===familySections.length-1}
+                            style={{ width:28, height:28, borderRadius:6, border:`1px solid ${C.border2}`,
+                              background:C.surf2, color:idx===familySections.length-1?C.textD:C.yellow,
+                              cursor:idx===familySections.length-1?"default":"pointer",
+                              display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700 }}>↓</button>
                         </div>
                       </div>
                     );
                   })}
+                  {/* Disabled sections */}
+                  {SECTIONS.filter(s=>!familySections.includes(s.id)).length > 0 && (
+                    <p style={{ fontSize:11, color:C.textD, margin:"14px 0 8px" }}>Secções inativas</p>
+                  )}
+                  {SECTIONS.filter(s=>!familySections.includes(s.id)).map(s => (
+                    <div key={s.id} onClick={()=>toggleSec(s.id)}
+                      style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                        padding:"10px 14px", borderRadius:8, marginBottom:6, cursor:"pointer",
+                        border:`1.5px solid ${C.border2}`, background:C.surf2, transition:"all .15s" }}>
+                      <span style={{ fontSize:14, fontWeight:400, color:C.textS }}>{s.label}</span>
+                      <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${C.border2}`,
+                        background:"transparent" }}/>
+                    </div>
+                  ))}
                   <div style={{ display:"flex", gap:10, marginTop:16 }}>
                     <button onClick={()=>setEditingFamily(null)} style={{ flex:1, padding:"11px", borderRadius:10,
                       border:`1.5px solid ${C.border2}`, background:"transparent", color:C.textS,
