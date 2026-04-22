@@ -37,10 +37,12 @@ const api = {
   getTarifarios:          ()     => sbFetch("/gi_am_tarifarios?select=*&order=nome.asc"),
   addTarifario:           (nome) => sbFetch("/gi_am_tarifarios",                        {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
   deleteTarifario:        (id)   => sbFetch(`/gi_am_tarifarios?id=eq.${id}`,           {method:"DELETE"}),
-  getSistemasOperativos:  ()     => sbFetch("/gi_am_sistemas_operativos?select=*&order=nome.asc"),
-  addSistemaOperativo:    (nome) => sbFetch("/gi_am_sistemas_operativos",               {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
-  deleteSistemaOperativo: (id)   => sbFetch(`/gi_am_sistemas_operativos?id=eq.${id}`,  {method:"DELETE"}),
-  getAssetsWithSO:        (nome) => sbFetch(`/gi_am_assets?so=eq.${encodeURIComponent(nome)}&select=id,name`),
+  getSistemasOperativos:  ()          => sbFetch("/gi_am_sistemas_operativos?select=*&order=nome.asc"),
+  addSistemaOperativo:    (nome)      => sbFetch("/gi_am_sistemas_operativos",               {method:"POST",  prefer:"return=representation", body:JSON.stringify({nome})}),
+  updateSistemaOperativo: (id, d)     => sbFetch(`/gi_am_sistemas_operativos?id=eq.${id}`,  {method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
+  deleteSistemaOperativo: (id)        => sbFetch(`/gi_am_sistemas_operativos?id=eq.${id}`,  {method:"DELETE"}),
+  getAssetsWithSO:        (nome)      => sbFetch(`/gi_am_assets?so=eq.${encodeURIComponent(nome)}&select=id,name`),
+  updateAssetsSO:         (old_, new_)=> sbFetch(`/gi_am_assets?so=eq.${encodeURIComponent(old_)}`, {method:"PATCH", body:JSON.stringify({so:new_})}),
   addUtilizador:     (d)    => sbFetch("/gi_am_utilizadores",             {method:"POST",  prefer:"return=representation", body:JSON.stringify(d)}),
   updateUtilizador:  (id,d) => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"PATCH", prefer:"return=representation", body:JSON.stringify(d)}),
   deleteUtilizador:  (id)   => sbFetch(`/gi_am_utilizadores?id=eq.${id}`,{method:"DELETE"}),
@@ -1642,6 +1644,8 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   const [editingFamily,  setEditingFamily]  = useState(null);
   const [familySections, setFamilySections] = useState([]);
   const [soDeleteBlock,  setSoDeleteBlock]  = useState(null);
+  const [editingSO,      setEditingSO]      = useState(null);
+  const [editingSOVal,   setEditingSOVal]   = useState("");
   // Security
   const [pinEnabled,    setPinEnabled]    = useState(() => localStorage.getItem(PIN_ENABLED_KEY) !== "false");
   const [showChangePIN, setShowChangePIN] = useState(false);
@@ -1693,6 +1697,22 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
   const toggleSec = id => setFamilySections(prev =>
     prev.includes(id) ? prev.filter(s=>s!==id) : [...prev, id]
   );
+  const saveSOMEdit = async () => {
+    const newNome = editingSOVal.trim();
+    if (!newNome || newNome === editingSO.nome) { setEditingSO(null); return; }
+    if (sistemasOperativos.find(s => s.nome.toLowerCase() === newNome.toLowerCase() && s.id !== editingSO.id)) {
+      showToast("Já existe um S.O. com esse nome","error"); return;
+    }
+    try {
+      const res = await api.updateSistemaOperativo(editingSO.id, { nome: newNome });
+      await api.updateAssetsSO(editingSO.nome, newNome);
+      onUpdate("sistemas_operativos", sistemasOperativos.map(s => s.id===editingSO.id ? res[0] : s));
+      onUpdate("assets", assets.map(a => a.so===editingSO.nome ? {...a, so:newNome} : a));
+      setEditingSO(null);
+      showToast("S.O. atualizado.");
+    } catch { showToast("Erro ao atualizar","error"); }
+  };
+
   const moveSec = (id, dir) => setFamilySections(prev => {
     const idx = prev.indexOf(id);
     if (idx === -1) return prev;
@@ -2033,7 +2053,7 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
             <div style={{ display:"flex", gap:10, marginBottom:8 }}>
               <input value={newVal} onChange={e=>{ setNewVal(e.target.value); setAddErr(""); }}
                 onKeyDown={e=>e.key==="Enter"&&addItem()}
-                placeholder={section==="families"?"Ex: Computador":section==="marcas"?"Ex: Apple":section==="tarifarios"?"Ex: NOS Empresas 20GB":"Ex: Gabinete Informática"}
+                placeholder={section==="families"?"Ex: Computador":section==="marcas"?"Ex: Apple":section==="tarifarios"?"Ex: NOS Empresas 20GB":section==="sistemas_operativos"?"Ex: Windows 11 Pro":"Ex: Gabinete Informática"}
                 style={{ ...IS(!!addErr), flex:1, fontSize:13 }}
                 onFocus={e=>e.target.style.borderColor=C.yellow}
                 onBlur={e=>e.target.style.borderColor=addErr?C.red:C.border2}/>
@@ -2043,28 +2063,52 @@ function SettingsPage({ families, localizacoes, utilizadores, marcas, tarifarios
             </div>
             {addErr && <p style={{ color:C.red, fontSize:12, marginBottom:10 }}>{addErr}</p>}
             {currentList.map(item=>(
-              <div key={item.id} style={{ background:C.surf, borderRadius:9, border:`1px solid ${C.border}`,
-                padding:"12px 13px", marginBottom:7, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div>
-                  <span style={{ fontSize:14, color:C.text }}>{item[nameKey]}</span>
-                  {section==="families" && (
-                    <div style={{ fontSize:11, color:C.textD, marginTop:2 }}>
-                      {(item.sections ?? SECTIONS.map(s=>s.id)).map(id => SECTIONS.find(s=>s.id===id)?.label).filter(Boolean).join(", ") || "Sem secções"}
+              <div key={item.id} style={{ background:C.surf, borderRadius:9, border:`1px solid ${editingSO?.id===item.id?C.yellow:C.border}`,
+                padding:"12px 13px", marginBottom:7, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8,
+                transition:"border-color .15s" }}>
+                {section==="sistemas_operativos" && editingSO?.id===item.id ? (
+                  <>
+                    <input value={editingSOVal} onChange={e=>setEditingSOVal(e.target.value)} autoFocus
+                      onKeyDown={e=>{ if(e.key==="Enter") saveSOMEdit(); if(e.key==="Escape") setEditingSO(null); }}
+                      style={{ ...IS(), flex:1, fontSize:13 }}
+                      onFocus={e=>e.target.style.borderColor=C.yellow}
+                      onBlur={e=>e.target.style.borderColor=C.border2}/>
+                    <button onClick={saveSOMEdit} style={{ padding:"0 14px", borderRadius:7, border:"none",
+                      background:C.yellow, color:C.bg, cursor:"pointer", fontWeight:700, fontSize:13, flexShrink:0 }}>Guardar</button>
+                    <button onClick={()=>setEditingSO(null)} style={{ padding:"0 10px", borderRadius:7, border:`1px solid ${C.border2}`,
+                      background:"transparent", color:C.textS, cursor:"pointer", flexShrink:0 }}>✕</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <span style={{ fontSize:14, color:C.text }}>{item[nameKey]}</span>
+                      {section==="families" && (
+                        <div style={{ fontSize:11, color:C.textD, marginTop:2 }}>
+                          {(item.sections ?? SECTIONS.map(s=>s.id)).map(id => SECTIONS.find(s=>s.id===id)?.label).filter(Boolean).join(", ") || "Sem secções"}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div style={{ display:"flex", gap:6 }}>
-                  {section==="families" && (
-                    <button onClick={()=>openEditFamily(item)} style={{ background:C.surf2, border:`1px solid ${C.border2}`,
-                      color:C.textS, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
-                      Secções
-                    </button>
-                  )}
-                  <button onClick={()=>removeItem(item)} style={{ background:C.redL, border:"none",
-                    color:C.red, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
-                    Remover
-                  </button>
-                </div>
+                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                      {section==="sistemas_operativos" && (
+                        <button onClick={()=>{ setEditingSO(item); setEditingSOVal(item.nome); }}
+                          style={{ background:C.surf2, border:`1px solid ${C.border2}`,
+                            color:C.textS, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                          Editar
+                        </button>
+                      )}
+                      {section==="families" && (
+                        <button onClick={()=>openEditFamily(item)} style={{ background:C.surf2, border:`1px solid ${C.border2}`,
+                          color:C.textS, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                          Secções
+                        </button>
+                      )}
+                      <button onClick={()=>removeItem(item)} style={{ background:C.redL, border:"none",
+                        color:C.red, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                        Remover
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
             {currentList.length===0 && (
@@ -2303,6 +2347,7 @@ export default function App() {
     else if (type==="marcas") setMarcas(updated);
     else if (type==="tarifarios") setTarifarios(updated);
     else if (type==="sistemas_operativos") setSistemasOperativos(updated);
+    else if (type==="assets") setAssets(updated);
   };
 
   const handleAddMarca     = item => setMarcas(prev => [...prev, item].sort((a,b)=>a.nome.localeCompare(b.nome)));
