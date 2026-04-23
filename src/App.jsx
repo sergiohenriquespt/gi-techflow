@@ -533,50 +533,48 @@ function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas
   const padding = isMobile ? "16px 20px 24px" : "20px 24px 24px";
   const gridCols = isMobile ? "1fr" : "1fr 1fr";
 
-  const content = (
-    <div style={{ padding }}>
-      {/* Foto + Nome */}
-      <div style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:16 }}>
-        <div style={{ flexShrink:0 }}>
-          <div style={{ width:72, height:88, borderRadius:10, overflow:"hidden",
-            border:`1.5px dashed ${C.border2}`, background:C.surf2, cursor:"pointer",
-            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4 }}
-            onClick={()=>fileRef.current.click()}>
-            {preview
-              ? <img src={preview} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
-              : <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.textD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS.assets}/></svg><span style={{ fontSize:9, color:C.textD, fontWeight:600, letterSpacing:"0.1em" }}>FOTO</span></>
-            }
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display:"none" }}/>
+  const identityJSX = (cols) => (
+    <div style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:16 }}>
+      <div style={{ flexShrink:0 }}>
+        <div style={{ width:72, height:88, borderRadius:10, overflow:"hidden",
+          border:`1.5px dashed ${C.border2}`, background:C.surf2, cursor:"pointer",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4 }}
+          onClick={()=>fileRef.current.click()}>
+          {preview
+            ? <img src={preview} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
+            : <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.textD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS.assets}/></svg><span style={{ fontSize:9, color:C.textD, fontWeight:600, letterSpacing:"0.1em" }}>FOTO</span></>
+          }
         </div>
-        <div style={{ flex:1, display:"flex", flexDirection:"column", gap:10 }}>
+        <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display:"none" }}/>
+      </div>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:10 }}>
+        <div>
+          <label style={LS}>Nome / Designação *</label>
+          <input {...iP("name")} placeholder="Ex: PC-RECEÇÃO-01"/>
+          {errors.name && <span style={{ fontSize:11, color:C.red, marginTop:3, display:"block" }}>Campo obrigatório</span>}
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:cols, gap:10 }}>
           <div>
-            <label style={LS}>Nome / Designação *</label>
-            <input {...iP("name")} placeholder="Ex: PC-RECEÇÃO-01"/>
-            {errors.name && <span style={{ fontSize:11, color:C.red, marginTop:3, display:"block" }}>Campo obrigatório</span>}
+            <label style={LS}>Família</label>
+            <select value={form.family_id||""} onChange={e=>set("family_id",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
+              <option value="">— Sem família —</option>
+              {families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:gridCols, gap:10 }}>
-            <div>
-              <label style={LS}>Família</label>
-              <select value={form.family_id||""} onChange={e=>set("family_id",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
-                <option value="">— Sem família —</option>
-                {families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={LS}>Atribuído a</label>
-              <select value={form.utilizador_id||""} onChange={e=>set("utilizador_id",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
-                <option value="">— Não atribuído —</option>
-                {utilizadores.map(u=><option key={u.id} value={u.id}>{u.nome}</option>)}
-              </select>
-            </div>
+          <div>
+            <label style={LS}>Atribuído a</label>
+            <select value={form.utilizador_id||""} onChange={e=>set("utilizador_id",e.target.value)} style={{ ...IS(), cursor:"pointer" }}>
+              <option value="">— Não atribuído —</option>
+              {utilizadores.map(u=><option key={u.id} value={u.id}>{u.nome}</option>)}
+            </select>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      {/* Sections rendered in family-defined order */}
-      {(() => {
-        const sectionContent = {
+  const formSections = (() => {
+    const sectionContent = {
           credenciais: (
             <>
               <SH label="Credenciais"/>
@@ -900,7 +898,12 @@ function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas
         return allowedSecs.map(id =>
           sectionContent[id] ? <React.Fragment key={id}>{sectionContent[id]}</React.Fragment> : null
         );
-      })()}
+  })();
+
+  const content = (
+    <div style={{ padding }}>
+      {identityJSX(gridCols)}
+      {formSections}
 
       <div style={{ display:"flex", gap:10, marginTop:20 }}>
         <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10,
@@ -914,6 +917,73 @@ function AssetForm({ asset, assets, families, localizacoes, utilizadores, marcas
       </div>
     </div>
   );
+
+  if (!isMobile) {
+    return (
+      <div style={{ position:"fixed", inset:0, zIndex:500,
+        background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
+        display:"flex", alignItems:"center", justifyContent:"center", padding:16,
+        animation:"fadeIn .2s" }}
+        onClick={onClose}>
+        <div style={{ background:C.surf, borderRadius:12, width:"100%", maxWidth:960,
+          border:`1px solid ${C.border}`, boxShadow:"0 24px 60px rgba(0,0,0,0.5)",
+          height:"min(88vh, 720px)", display:"flex", flexDirection:"column",
+          animation:"fadeUp .2s ease", overflow:"hidden" }}
+          onClick={e=>e.stopPropagation()}>
+
+          {/* Top bar */}
+          <div style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`,
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:C.surf3, flexShrink:0 }}>
+            <h2 style={{ fontSize:16, fontWeight:700, color:C.text }}>
+              {asset?.id ? "Editar Ativo" : "Novo Ativo"}
+            </h2>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <button onClick={submit} disabled={saving||uploading} title="Gravar"
+                style={{ background:C.yellow, border:"none", color:C.bg, borderRadius:6,
+                  width:30, height:30, cursor:"pointer", display:"flex", alignItems:"center",
+                  justifyContent:"center", opacity:(saving||uploading)?0.6:1 }}>
+                <Ico n="check" s={14} c={C.bg}/>
+              </button>
+              <button onClick={onClose}
+                style={{ background:"transparent", border:`1px solid ${C.border2}`,
+                  color:C.textS, borderRadius:6, width:30, height:30, cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Ico n="x" s={14}/>
+              </button>
+            </div>
+          </div>
+
+          {/* Two panels */}
+          <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
+
+            {/* Left: identity */}
+            <div style={{ width:280, flexShrink:0, background:C.surf2,
+              borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column",
+              padding:"20px", overflowY:"auto" }}>
+              {identityJSX("1fr")}
+              <div style={{ flex:1 }}/>
+              <div style={{ display:"flex", gap:10, marginTop:20 }}>
+                <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10,
+                  border:`1.5px solid ${C.border2}`, background:"transparent", color:C.textS,
+                  cursor:"pointer", fontSize:14, fontWeight:600 }}>Cancelar</button>
+                <button onClick={submit} disabled={saving||uploading} style={{ flex:1, padding:"11px",
+                  borderRadius:10, border:"none", background:C.yellow, color:C.bg,
+                  cursor:"pointer", fontSize:14, fontWeight:700, opacity:saving?0.7:1, transition:"opacity .2s" }}>
+                  {saving?"A guardar...": asset?.id?"Guardar":"Adicionar"}
+                </button>
+              </div>
+            </div>
+
+            {/* Right: sections */}
+            <div style={{ flex:1, overflowY:"auto", padding:"20px 24px 24px" }}>
+              {formSections}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Modal onClose={onClose} title={asset?.id?"Editar Ativo":"Novo Ativo"} isMobile={isMobile}
@@ -1162,20 +1232,30 @@ function AssetDetail({ asset, assets, families, utilizadores, onEdit, onDelete, 
     );
   }
 
-  // Desktop: centered modal
+  // Desktop: two-panel
+  const btnIcon = (onClick, icon, title, red) => (
+    <button onClick={onClick} title={title}
+      style={{ background:"transparent", border:`1px solid ${red?"rgba(224,82,82,0.35)":C.border2}`,
+        color:red?C.red:C.textS, borderRadius:6, width:28, height:28, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <Ico n={icon} s={13} c={red?C.red:undefined}/>
+    </button>
+  );
+
   return (
     <div style={{ position:"fixed", inset:0, zIndex:300,
       background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
       display:"flex", alignItems:"center", justifyContent:"center", padding:16,
       animation:"fadeIn .2s" }}
       onClick={onClose}>
-      <div style={{ background:C.surf, borderRadius:12, width:"100%", maxWidth:520,
+      <div style={{ background:C.surf, borderRadius:12, width:"100%", maxWidth:960,
         border:`1px solid ${C.border}`, boxShadow:"0 24px 60px rgba(0,0,0,0.5)",
-        overflow:"hidden", maxHeight:"88vh", display:"flex", flexDirection:"column",
-        animation:"fadeUp .2s ease" }}
+        height:"min(88vh, 720px)", display:"flex", flexDirection:"column",
+        animation:"fadeUp .2s ease", overflow:"hidden" }}
         onClick={e=>e.stopPropagation()}>
-        {/* Modal header */}
-        <div style={{ padding:"18px 24px 14px", borderBottom:`1px solid ${C.border}`,
+
+        {/* Top bar */}
+        <div style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`,
           display:"flex", alignItems:"center", justifyContent:"space-between",
           background:C.surf3, flexShrink:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -1184,27 +1264,156 @@ function AssetDetail({ asset, assets, families, utilizadores, onEdit, onDelete, 
               textTransform:"uppercase", letterSpacing:"0.12em" }}>Detalhe do Ativo</span>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <button onClick={onEdit} title="Editar"
-              style={{ background:"transparent", border:`1px solid ${C.border2}`,
-                color:C.textS, borderRadius:6, width:28, height:28, cursor:"pointer",
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Ico n="edit" s={13}/>
-            </button>
-            <button onClick={()=>setConfirmDelete(true)} title="Remover"
-              style={{ background:"transparent", border:`1px solid rgba(224,82,82,0.35)`,
-                color:C.red, borderRadius:6, width:28, height:28, cursor:"pointer",
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Ico n="trash" s={13} c={C.red}/>
-            </button>
-            <button onClick={onClose} title="Fechar"
-              style={{ background:"transparent", border:`1px solid ${C.border2}`,
-                color:C.textS, borderRadius:6, width:28, height:28, cursor:"pointer",
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Ico n="x" s={13}/>
-            </button>
+            {btnIcon(onEdit, "edit", "Editar")}
+            {btnIcon(()=>setConfirmDelete(true), "trash", "Remover", true)}
+            {btnIcon(onClose, "x", "Fechar")}
           </div>
         </div>
-        <div style={{ overflowY:"auto", flex:1 }}>{content}</div>
+
+        {/* Two-panel body */}
+        <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
+
+          {/* Left: identity */}
+          <div style={{ width:280, flexShrink:0, background:C.surf2,
+            borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column",
+            padding:"24px 20px 20px", overflowY:"auto" }}>
+            <div style={{ alignSelf:"center", width:100, height:120, borderRadius:10,
+              overflow:"hidden", border:`1px solid ${C.border2}`, background:C.surf3, marginBottom:16 }}>
+              {asset.photo_url
+                ? <img src={asset.photo_url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
+                : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <Avatar name={asset.name} size={56}/>
+                  </div>
+              }
+            </div>
+            <h2 style={{ fontSize:16, fontWeight:700, color:C.text, letterSpacing:"-0.01em",
+              marginBottom:10, textAlign:"center", lineHeight:1.3 }}>{asset.name}</h2>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center", marginBottom:16 }}>
+              {familyName && <Badge label={familyName}/>}
+              {showSec("localizacao") && asset.localizacao &&
+                <span style={{ fontSize:12, color:C.textS }}>📍 {asset.localizacao}</span>}
+            </div>
+            <div style={{ height:1, background:C.border, marginBottom:16 }}/>
+            <p style={{ fontSize:10, fontWeight:600, color:C.yellow, textTransform:"uppercase",
+              letterSpacing:"0.1em", marginBottom:10 }}>Atribuído a</p>
+            {utilizador ? (
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
+                <Avatar src={utilizador.photo_url} name={utilizador.nome} size={48} round/>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600, color:C.text }}>{utilizador.nome}</div>
+                  {utilizador.email && <div style={{ fontSize:12, color:C.textS, marginTop:2 }}>{utilizador.email}</div>}
+                  {utilizador.telefone && <div style={{ fontSize:11, color:C.textD, marginTop:1 }}>{utilizador.telefone}</div>}
+                </div>
+              </div>
+            ) : (
+              <span style={{ fontSize:13, color:C.textD, fontStyle:"italic" }}>Não atribuído</span>
+            )}
+            <div style={{ flex:1 }}/>
+            <div style={{ display:"flex", gap:8, marginTop:20 }}>
+              <button onClick={onEdit} style={{ flex:1, padding:"9px", borderRadius:8,
+                background:C.surf3, border:`1px solid ${C.border2}`, color:C.textS,
+                cursor:"pointer", fontSize:12, fontWeight:600,
+                display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                <Ico n="edit" s={13} c={C.textS}/> Editar
+              </button>
+              <button onClick={()=>setConfirmDelete(true)} style={{ flex:1, padding:"9px", borderRadius:8,
+                background:C.redL, border:`1px solid rgba(224,82,82,0.3)`, color:C.red,
+                cursor:"pointer", fontSize:12, fontWeight:600,
+                display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                <Ico n="trash" s={13} c={C.red}/> Remover
+              </button>
+            </div>
+          </div>
+
+          {/* Right: sections */}
+          <div style={{ flex:1, overflowY:"auto", padding:"4px 24px 24px" }}>
+            {allowedSecs.map(id => {
+              if (id === "credenciais") {
+                const creds = asset.credentials || [];
+                if (!creds.length) return null;
+                return (
+                  <div key={id}>
+                    <SH label="Credenciais"/>
+                    {creds.map((cred, idx) => (
+                      <div key={idx} style={{ background:C.surf2, borderRadius:8, border:`1px solid ${C.border}`, padding:"12px 14px", marginBottom:8 }}>
+                        {cred.label && <div style={{ fontSize:10, fontWeight:700, color:C.yellow, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>{cred.label}</div>}
+                        {cred.username && (
+                          <div style={{ display:"flex", gap:12, padding:"6px 0", borderBottom:`1px solid ${C.border}` }}>
+                            <span style={{ fontSize:11, fontWeight:600, color:C.textD, textTransform:"uppercase", letterSpacing:"0.08em", minWidth:80, flexShrink:0 }}>Username</span>
+                            <span style={{ fontSize:13, color:C.text, fontFamily:FM }}>{cred.username}</span>
+                          </div>
+                        )}
+                        <div style={{ display:"flex", gap:12, padding:"6px 0", alignItems:"center" }}>
+                          <span style={{ fontSize:11, fontWeight:600, color:C.textD, textTransform:"uppercase", letterSpacing:"0.08em", minWidth:80, flexShrink:0 }}>Password</span>
+                          <span style={{ fontSize:16, color:C.textD, flex:1, letterSpacing:"0.15em" }}>{"•".repeat(Math.min((cred.password||"").length||8, 12))}</span>
+                          {cred.password && (
+                            <button onClick={()=>copyCredDetail(idx, cred.password)}
+                              style={{ background:copiedCredIdx===idx?C.greenL:C.surf3,
+                                border:`1px solid ${copiedCredIdx===idx?C.green:C.border2}`,
+                                borderRadius:6, padding:"5px 10px", cursor:"pointer",
+                                color:copiedCredIdx===idx?C.green:C.textS, flexShrink:0,
+                                display:"flex", alignItems:"center", gap:4, fontSize:11, fontWeight:600, transition:"all .2s" }}>
+                              <Ico n="copy" s={12} c={copiedCredIdx===idx?C.green:C.textS}/>
+                              {copiedCredIdx===idx?"Copiado!":"Copiar"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              if (id === "observacoes") {
+                if (!asset.observacoes) return null;
+                return (
+                  <div key={id}>
+                    <SH label="Observações"/>
+                    <p style={{ fontSize:13, color:C.textS, lineHeight:1.8, padding:"10px 13px",
+                      background:C.surf2, borderRadius:8, border:`1px solid ${C.border}` }}>
+                      {asset.observacoes}
+                    </p>
+                  </div>
+                );
+              }
+              const def = sectionDefs[id];
+              if (!def) return null;
+              const hasData = def.rows.some(([,v])=>v!=null&&v!==false&&v!=="");
+              if (!hasData) return null;
+              return (
+                <div key={id}>
+                  <SH label={def.title}/>
+                  {def.rows.map(([label,value,mono])=> value!=null&&value!==""&&value!==false
+                    ? <Row key={label} label={label} value={String(value)} mono={mono}/> : null)}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {confirmDelete && (
+          <Modal onClose={()=>setConfirmDelete(false)} isMobile={false}>
+            <div style={{ padding:"28px 24px", textAlign:"center" }}>
+              <div style={{ width:48, height:48, borderRadius:"50%", background:C.redL,
+                border:`1px solid ${C.red}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+                <Ico n="trash" s={20} c={C.red}/>
+              </div>
+              <h3 style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:8 }}>Remover Ativo</h3>
+              <p style={{ fontSize:13, color:C.textS, lineHeight:1.7, marginBottom:22 }}>
+                Tens a certeza que queres remover<br/>
+                <strong style={{ color:C.text }}>{asset.name}</strong>?<br/>
+                <span style={{ fontSize:11, color:C.textD }}>Esta ação não pode ser desfeita.</span>
+              </p>
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={()=>setConfirmDelete(false)} style={{ flex:1, padding:"11px",
+                  borderRadius:10, border:`1.5px solid ${C.border2}`, background:"transparent",
+                  color:C.textS, cursor:"pointer", fontSize:14, fontWeight:600 }}>Cancelar</button>
+                <button onClick={onDelete} style={{ flex:1, padding:"11px", borderRadius:10,
+                  border:"none", background:C.red, color:"#fff",
+                  cursor:"pointer", fontSize:14, fontWeight:700 }}>Remover</button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   );

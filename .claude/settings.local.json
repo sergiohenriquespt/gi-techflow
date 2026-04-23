@@ -12,7 +12,11 @@
       "Bash(npx vite *)",
       "Bash(node_modules/.bin/react-scripts build *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npm start *)",
+      "Bash(npm install *)",
+      "Bash(node --input-type=module)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const src=fs.readFileSync\\('src/App.jsx','utf8'\\); const lines=src.split\\('\\\\n'\\).length; console.log\\('Lines:',lines\\);\")"
     ]
   }
 }
